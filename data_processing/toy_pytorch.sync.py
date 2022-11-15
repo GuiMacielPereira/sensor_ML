@@ -72,7 +72,33 @@ y = torch.tensor(yfold, device=device, dtype=torch.long)
 xv = torch.tensor(Xval, device=device, dtype=dtype)
 yv = torch.tensor(yval, device=device, dtype=torch.long)
 
+#%%
+# Define a general procedure to train a model
 
+def trainModel(model, loss_fn, optimizer, x, y, xv, yv, N=2000):
+# learning_rate = 1e-4
+    for t in range(N):
+
+        y_pred = model(x)
+
+        loss = loss_fn(y_pred, y)
+
+        # Backward pass: compute gradient of the loss with respect to all the learnable
+        # Internally, this call will compute gradients for all learnable parameters in the model.
+        loss.backward()
+
+        # Update weights
+        optimizer.step()
+        # Zero the gradients after weight updates.
+        optimizer.zero_grad()
+
+        with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
+            if t%100==0:
+                print(f"Iteration {t}\nLoss: {loss.item()}")
+                checkAcc(xv, yv, model)
+
+#%% 
+# Create a simple architecture first
 # Use nn.Sequention API 
 # Each layer has its own internal weights and bias 
 model = torch.nn.Sequential(
@@ -84,30 +110,9 @@ model = torch.nn.Sequential(
 # Loss function to use - check available functions on pytorch
 loss_fn = torch.nn.CrossEntropyLoss()
 
-learning_rate = 1e-4
-for t in range(2000):
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
 
-    y_pred = model(x)
-
-    loss = loss_fn(y_pred, y)
-
-    if t%100==0:
-      print(t, loss.item())
-
-    # Zero the gradients before running the backward pass.
-    model.zero_grad()
-
-    # Backward pass: compute gradient of the loss with respect to all the learnable
-    # Internally, this call will compute gradients for all learnable parameters in the model.
-    loss.backward()
-
-    # Update weights
-    with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
-        for param in model.parameters():
-          param.data -= learning_rate * param.grad
-    
-        if t%100==0:
-            checkAcc(xv, yv, model)
+trainModel(model, loss_fn, optimizer, x, y, xv, yv)
 
 #%%
 # Test model on test data
@@ -117,7 +122,51 @@ with torch.no_grad():
     checkAcc(xt, yt, model, set="Test")
 
 #%%
-# Normalizing the data and building a deep layer model
+# Normalizing the data and building a deeper layer model
+def normalize(x, xtr):
+    # Use quantities from training data set
+    avgmax = np.mean(np.max(xtr, axis=1))
+    return x / avgmax 
+
+xdata = [Xfold, Xval, Xtest]
+for i in range(len(xdata)):
+    xdata[i] = normalize(xdata[i], Xfold)
+
+# Pass onto pytorch tensors
+for i in range(len(xdata)):
+    xdata[i] = torch.tensor(xdata[i], device=device, dtype=dtype)
+
+xnorm, xvnorm, xtnorm = xdata
+
+class deepModel(torch.nn.Module):
+    def __init__(self):
+        super(deepModel, self).__init__()
+
+        self.layer1 = torch.nn.Sequential(
+                torch.nn.Conv1d(1, 10, kernel_size=3),
+                torch.nn.ReLU(),
+                torch.nn.MaxPool1d(kernel_size=2)
+                )
+        self.fc1 = torch.nn.Linear(15 * 10, 1000)
+        self.fc2 = torch.nn.Linear(1000, 2)
+
+    def forward(self, x):
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
+        return out
+
+
+model_deep = deepModel()
+loss_fn = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+print("Same model but with normalized data:")
+trainModel(model_deep, loss_fn, optimizer, xnorm, y, xvnorm, yv)
+with torch.no_grad():
+    checkAcc(xtnorm, yt, model, set="Test")
+
 
 #%%
 import matplotlib.pyplot as plt
@@ -132,9 +181,11 @@ usr2 = ~usr1
 
 for j, usr in enumerate([usr1, usr2]):
     X1 = Xtest[usr]
+    labels = ytest[usr]
     plt.figure(figsize=(20, 3))
     plt.suptitle(f"Predictions for user {j}")
-    for i, x in enumerate(X1):
+    for i, (x, lab) in enumerate(zip(X1, labels)):
         plt.subplot(1, len(X1), i+1)
         plt.plot(range(len(x)), x, "b.")
+        plt.title(f"Real User: {lab}")
 
