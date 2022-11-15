@@ -1,19 +1,19 @@
 #%%
 # This mounts your Google Drive to the Colab VM.
-from google.colab import drive
-drive.mount('/content/drive')
-
-# TODO: Enter the foldername in your Drive where you have saved the unzipped
-# assignment folder, e.g. 'cs231n/assignments/assignment2/'
-FOLDERNAME = 'Masters_Project/data_processing'
-assert FOLDERNAME is not None, "[!] Enter the foldername."
-
-# Now that we've mounted your Drive, this ensures that
-# the Python interpreter of the Colab VM can load
-# python files from within it.
-import sys
-sys.path.append('/content/drive/My Drive/{}'.format(FOLDERNAME))
-
+# from google.colab import drive
+# drive.mount('/content/drive')
+#
+# # TODO: Enter the foldername in your Drive where you have saved the unzipped
+# # assignment folder, e.g. 'cs231n/assignments/assignment2/'
+# FOLDERNAME = 'Masters_Project/data_processing'
+# assert FOLDERNAME is not None, "[!] Enter the foldername."
+#
+# # Now that we've mounted your Drive, this ensures that
+# # the Python interpreter of the Colab VM can load
+# # python files from within it.
+# import sys
+# sys.path.append('/content/drive/My Drive/{}'.format(FOLDERNAME))
+#
 
 #%%
 # Load triggers data
@@ -47,13 +47,13 @@ print("Size of train set:", Xtrain.shape)
 
 #%%
 # Function to print accuracy of validation set while training
-def checkAcc(x, y, model):
+def checkAcc(x, y, model, set="Validation"):
     scores = model(x)
     _, preds = scores.max(1)
     num_correct = (preds == y).sum()
     num_samples = preds.size(0)
     acc = float(num_correct) / num_samples
-    print(f"Accuracy: {num_correct} / {num_samples} = {acc:.2f}")
+    print(f"{set} Accuracy: {num_correct} / {num_samples} = {acc:.2f}")
 
 
 #%%
@@ -85,7 +85,7 @@ model = torch.nn.Sequential(
 loss_fn = torch.nn.CrossEntropyLoss()
 
 learning_rate = 1e-4
-for t in range(1000):
+for t in range(2000):
 
     y_pred = model(x)
 
@@ -113,8 +113,11 @@ for t in range(1000):
 # Test model on test data
 xt= torch.tensor(Xtest, device=device, dtype=dtype)
 yt= torch.tensor(ytest, device=device, dtype=torch.long)
+with torch.no_grad():
+    checkAcc(xt, yt, model, set="Test")
 
-checkAcc(xt, yt, model)
+#%%
+# Normalizing the data and building a deep layer model
 
 #%%
 import matplotlib.pyplot as plt
@@ -122,8 +125,7 @@ import matplotlib.pyplot as plt
 with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
     scores = model(xt)
     _, preds = scores.max(1)
-
-predictions = preds.numpy()
+    predictions = preds.detach().numpy()
 
 usr1 = predictions==0
 usr2 = ~usr1
