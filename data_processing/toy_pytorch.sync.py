@@ -37,23 +37,20 @@ Xraw.shape
 #%% 
 # Split data into test  and train set
 Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.1, random_state=42)
-print("Fraction of single class in test set: ", np.mean(ytest==0))
 print("Size of test set:", Xtest.shape)
-
-# Split train data into train and validation set
-Xfold, Xval, yfold, yval = train_test_split(Xtrain, ytrain, test_size=0.1, random_state=42)
 print("Size of train set:", Xtrain.shape)
+print("Fraction of single class in test set: ", np.mean(ytest==0))
 
+#%% Option to normalize data
+# The normalization should always be relative to the train set but I this simple norm is okay for nowk 
+# Skip this cell to try unormalised data
+def normalize(x):   
+    # Use quantities from training data set
+    avgmax = np.max(x, axis=1)[:, np.newaxis]
+    return x / avgmax 
 
-#%%
-# Function to print accuracy of validation set while training
-def checkAcc(x, y, model, set="Validation"):
-    scores = model(x)
-    _, preds = scores.max(1)    # Returns indices alongside axis=1
-    num_correct = (preds == y).sum()
-    num_samples = preds.size(0)
-    acc = float(num_correct) / num_samples
-    print(f"{set} Accuracy: {num_correct} / {num_samples} = {acc:.2f}")
+Xtrain = normalize(Xtrain) 
+Xtest = normalize(Xtest)
 
 
 #%%
@@ -63,19 +60,17 @@ import torch
 device = torch.device('cpu')
 dtype = torch.float32
 
-N, D_in, H, D_out = len(Xtrain), 30, 1000, 2 
+# Function to print accuracy of validation set while training
+def checkAcc(x, y, model, set="Train set"):
+    scores = model(x)
+    _, preds = scores.max(1)    # Returns indices alongside axis=1
+    num_correct = (preds == y).sum()
+    num_samples = preds.size(0)
+    acc = float(num_correct) / num_samples
+    print(f"{set} Accuracy: {num_correct} / {num_samples} = {acc:.2f}")
 
-# Create random Tensors to hold inputs and outputs
-x = torch.tensor(Xfold, device=device, dtype=dtype)
-y = torch.tensor(yfold, device=device, dtype=torch.long)
-
-xv = torch.tensor(Xval, device=device, dtype=dtype)
-yv = torch.tensor(yval, device=device, dtype=torch.long)
-
-#%%
 # Define a general procedure to train a model
-
-def trainModel(model, loss_fn, optimizer, x, y, xv, yv, N=1000):
+def trainModel(model, loss_fn, optimizer, x, y, N=1000):
     for t in range(N):
 
         y_pred = model(x)
@@ -94,12 +89,21 @@ def trainModel(model, loss_fn, optimizer, x, y, xv, yv, N=1000):
         with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
             if t%100==0:
                 print(f"Iteration {t}\nLoss: {loss.item()}")
-                checkAcc(xv, yv, model)
+                checkAcc(x, y, model)
 
 #%% 
-# Create a simple architecture first
-# Use nn.Sequention API 
-# Each layer has its own internal weights and bias 
+# Pass data to tensors
+x = torch.tensor(Xtrain, device=device, dtype=dtype)
+y = torch.tensor(ytrain, device=device, dtype=torch.long)
+
+xt= torch.tensor(Xtest, device=device, dtype=dtype)
+yt= torch.tensor(ytest, device=device, dtype=torch.long)
+
+#%% 
+# Simple Fully Connected NN
+# Gets 0.7 accuracy after 10000 iterations, but performs better with unormalised parameters (0.8)
+N, D_in, H, D_out = len(Xtrain), 30, 1000, 2 
+
 model = torch.nn.Sequential(
           torch.nn.Linear(D_in, H),
           torch.nn.ReLU(),
@@ -108,41 +112,23 @@ model = torch.nn.Sequential(
 
 # Loss function to use - check available functions on pytorch
 loss_fn = torch.nn.CrossEntropyLoss()
-
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
 
-# trainModel(model, loss_fn, optimizer, x, y, xv, yv)
-
-#%%
+trainModel(model, loss_fn, optimizer, x, y, 10000)
 # Test model on test data
-xt= torch.tensor(Xtest, device=device, dtype=dtype)
-yt= torch.tensor(ytest, device=device, dtype=torch.long)
-# with torch.no_grad():
-#     checkAcc(xt, yt, model, set="Test")
+with torch.no_grad():
+    checkAcc(xt, yt, model, set="\nTest")
+
 
 #%%
-# Normalizing the data and building a deeper layer model
-def normalize(x, xtr):
-    # Use quantities from training data set
-    # avgmax = np.mean(np.max(xtr, axis=1))
-    avgmax = np.max(x, axis=1)[:, np.newaxis]
-    return x / avgmax 
-
-xdata = [Xfold, Xval, Xtest]
-for i in range(len(xdata)):
-    xdata[i] = normalize(xdata[i], Xfold)[:, np.newaxis, :]
-
-# Pass onto pytorch tensors
-for i in range(len(xdata)):
-    xdata[i] = torch.tensor(xdata[i], device=device, dtype=dtype)
-
-xnorm, xvnorm, xtnorm = xdata
-print(xnorm.shape)
+# NN with 2 Convolution Layers
+# Performs best with normalised data, but still works with unormalised
 
 class deepModel(torch.nn.Module):
     def __init__(self):
         super(deepModel, self).__init__()
 
+        # Number of filters on each layer
         D1 = 12 
         D2 = 12 
 
@@ -175,9 +161,13 @@ model_deep = deepModel().to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 optim_deep = torch.optim.SGD(model_deep.parameters(), lr=1e-3, momentum=0.9)
 
-trainModel(model_deep, loss_fn, optim_deep, xnorm, y, xvnorm, yv, 10000)
+# Run model, need to modify format of data
+x = x.view(x.shape[0], 1, x.shape[1])
+xt = xt.view(xt.shape[0], 1, xt.shape[1])
+
+trainModel(model_deep, loss_fn, optim_deep, x, y, 10000)
 with torch.no_grad():
-    checkAcc(xtnorm, yt, model_deep, set="Test")
+    checkAcc(xt, yt, model_deep, set="\nTest")
 
 
 #%%
@@ -198,8 +188,9 @@ def plotTest(Xtest, ytest, predictions):
 
 # Plot results
 with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
-    scores = model_deep(xtnorm).view(xtnorm.shape[0], -1)
+    scores = model_deep(xt)
     _, preds = scores.max(1)
     predictions = preds.detach().numpy()
 
 plotTest(Xtest, ytest, predictions)
+# plt.show()
