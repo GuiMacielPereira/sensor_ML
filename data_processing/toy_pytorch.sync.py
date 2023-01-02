@@ -21,11 +21,20 @@
 import numpy as np 
 from sklearn.model_selection import train_test_split
 
-data = np.load("./triggers_data.npz")
+data = np.load("./second_collection_triggs_rels.npz")
 
 triggers_only = True 
 releases_only = False 
 assert not(triggers_only & releases_only), "Can only pick one at one time"
+
+# Some clunky code below
+# Check the numner of different users
+users = []
+for key in data:
+    user, mode = key.split("_")
+    users.append(user)
+users = np.array(users, dtype=str)
+users = np.unique(users)
 
 Xraw = []
 yraw = []
@@ -37,8 +46,8 @@ for key in data:
     sig = data[key]
     Xraw.append(sig)
 
-    lab = user[1]   # Number for identifying user
-    yraw.append(np.full(len(sig), int(lab)-1))
+    # lab = int(user[1])-1  # Number for identifying user
+    yraw.append(np.full(len(sig), np.argwhere(users==user)[0]))
 
 Xraw = np.concatenate(Xraw)
 yraw = np.concatenate(yraw)
@@ -123,7 +132,7 @@ yt= torch.tensor(ytest, device=device, dtype=torch.long)
 #%% 
 # Simple Fully Connected NN
 # Gets 0.7 accuracy after 10000 iterations, but performs better with unormalised parameters (0.8)
-N, D_in, H, D_out = len(Xtrain), 30, 1000, 2 
+N, D_in, H, D_out = len(Xtrain), 30, 1000, 3 
 
 model = torch.nn.Sequential(
           torch.nn.Linear(D_in, H),
@@ -133,21 +142,22 @@ model = torch.nn.Sequential(
 
 # Loss function to use - check available functions on pytorch
 loss_fn = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-trainModel(model, loss_fn, optimizer, x, y, 10000)
+trainModel(model, loss_fn, optimizer, x, y, 5000)
 # Test model on test data
 with torch.no_grad():
     checkAcc(xt, yt, model, set="\nTest")
 
 #%%
-# To tun convolutions, need to modify shape of input
+# To run convolutions, need to modify shape of input
 x = x.view(x.shape[0], 1, x.shape[1])
 xt = xt.view(xt.shape[0], 1, xt.shape[1])
 
 #%%
 # NN with 2 Convolution Layers
 # Performs best with normalised data, but still works with unormalised
+# Currently overfitting data from second_collection
 
 class deepModel(torch.nn.Module):
     def __init__(self):
@@ -170,7 +180,7 @@ class deepModel(torch.nn.Module):
                 )
         # self.drop_out = torch.nn.Dropout()
         self.fc1 = torch.nn.Linear(D2 * 5, 100)    
-        self.fc2 = torch.nn.Linear(100, 2)
+        self.fc2 = torch.nn.Linear(100, 3)
 
     def forward(self, x):
         out = self.layer1(x)
@@ -184,9 +194,10 @@ class deepModel(torch.nn.Module):
 
 model_deep = deepModel().to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-optim_deep = torch.optim.SGD(model_deep.parameters(), lr=1e-3, momentum=0.9)
+# optim_deep = torch.optim.SGD(model_deep.parameters(), lr=1e-3, momentum=0.9)
+optim_deep = torch.optim.Adam(model_deep.parameters(), lr=1e-3)
 
-trainModel(model_deep, loss_fn, optim_deep, x, y, 10000)
+trainModel(model_deep, loss_fn, optim_deep, x, y, 5000)
 with torch.no_grad():
     checkAcc(xt, yt, model_deep, set="\nTest")
 
@@ -195,15 +206,13 @@ with torch.no_grad():
 import matplotlib.pyplot as plt
 
 def plotTest(Xtest, ytest, predictions, misclassifications_only=True):
+    #TODO: Change figure to a square format, to make plots visible
+    for j in np.unique(predictions):
 
-    usr1 = (predictions==0) 
-    usr2 = (predictions==1)
-    
-    if misclassifications_only:
-        usr1 = (predictions==0) & (ytest==1)
-        usr2 = (predictions==1) & (ytest==0) 
+        usr = predictions==j
+        if misclassifications_only:
+            usr = (predictions==j) & (ytest!=j) 
 
-    for j, usr in enumerate([usr1, usr2]):
         X1 = Xtest[usr]
         labels = ytest[usr]
         plt.figure(figsize=(15, 5))
