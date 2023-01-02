@@ -21,25 +21,46 @@
 import numpy as np 
 from sklearn.model_selection import train_test_split
 
-triggers = np.load("./triggers_data.npz")
+data = np.load("./triggers_data.npz")
+
+triggers_only = True 
+releases_only = False 
+assert not(triggers_only & releases_only), "Can only pick one at one time"
 
 Xraw = []
 yraw = []
-for i, key in enumerate(triggers):
-    sig = triggers[key]
+for key in data:
+    user, mode = key.split("_")
+    if triggers_only and (mode=="releases"): continue
+    if releases_only and (mode=="triggers"): continue
+    
+    sig = data[key]
     Xraw.append(sig)
-    yraw.append(np.full(len(sig), i))
+
+    lab = user[1]   # Number for identifying user
+    yraw.append(np.full(len(sig), int(lab)-1))
 
 Xraw = np.concatenate(Xraw)
 yraw = np.concatenate(yraw)
-Xraw.shape
+print("Raw data shape: ", Xraw.shape)
+print("Labels shape: ", yraw.shape)
+print("Unique labels: ", np.unique(yraw))
 
 #%% 
 # Split data into test  and train set
-Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.1, random_state=42)
+Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
 print("Size of test set:", Xtest.shape)
 print("Size of train set:", Xtrain.shape)
 print("Fraction of single class in test set: ", np.mean(ytest==0))
+
+# Plot the first 8 cases from train test
+import matplotlib.pyplot as plt
+nplots = 8
+plt.figure(figsize=(20, 5))
+for i in range(nplots):
+    plt.subplot(1, nplots, i+1)
+    plt.plot(range(len(Xtrain[i])), Xtrain[i], "b.")
+    plt.title(f"User: {ytrain[i]}")
 
 #%% Option to normalize data
 # The normalization should always be relative to the train set but I this simple norm is okay for nowk 
@@ -119,6 +140,10 @@ trainModel(model, loss_fn, optimizer, x, y, 10000)
 with torch.no_grad():
     checkAcc(xt, yt, model, set="\nTest")
 
+#%%
+# To tun convolutions, need to modify shape of input
+x = x.view(x.shape[0], 1, x.shape[1])
+xt = xt.view(xt.shape[0], 1, xt.shape[1])
 
 #%%
 # NN with 2 Convolution Layers
@@ -161,10 +186,6 @@ model_deep = deepModel().to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 optim_deep = torch.optim.SGD(model_deep.parameters(), lr=1e-3, momentum=0.9)
 
-# Run model, need to modify format of data
-x = x.view(x.shape[0], 1, x.shape[1])
-xt = xt.view(xt.shape[0], 1, xt.shape[1])
-
 trainModel(model_deep, loss_fn, optim_deep, x, y, 10000)
 with torch.no_grad():
     checkAcc(xt, yt, model_deep, set="\nTest")
@@ -173,9 +194,15 @@ with torch.no_grad():
 #%%
 import matplotlib.pyplot as plt
 
-def plotTest(Xtest, ytest, predictions):
-    usr1 = predictions==0
-    usr2 = ~usr1
+def plotTest(Xtest, ytest, predictions, misclassifications_only=True):
+
+    usr1 = (predictions==0) 
+    usr2 = (predictions==1)
+    
+    if misclassifications_only:
+        usr1 = (predictions==0) & (ytest==1)
+        usr2 = (predictions==1) & (ytest==0) 
+
     for j, usr in enumerate([usr1, usr2]):
         X1 = Xtest[usr]
         labels = ytest[usr]
@@ -186,6 +213,7 @@ def plotTest(Xtest, ytest, predictions):
             plt.plot(range(len(x)), x, "b.")
             plt.title(f"Real User: {lab}")
 
+
 # Plot results
 with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
     scores = model_deep(xt)
@@ -194,3 +222,13 @@ with torch.no_grad():     # Very important to specify no_grad to avoid automatic
 
 plotTest(Xtest, ytest, predictions)
 # plt.show()
+
+#%%
+# Plot misclassifications from training
+with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
+    scores = model_deep(x)
+    _, preds = scores.max(1)
+    predictions = preds.detach().numpy()
+
+plotTest(Xtrain, ytrain, predictions)
+

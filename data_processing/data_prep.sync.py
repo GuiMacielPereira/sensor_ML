@@ -21,13 +21,16 @@ def findTrigIdxs(signal, threshold=0.1):
     zerosIdx = np.argwhere(mask)[:, 0].astype(int)
     jumpIdx = np.argwhere(np.diff(zerosIdx)>1)[:, 0].astype(int)
     trigIdx =  zerosIdx[jumpIdx].astype(int)
-    return trigIdx
+    releaseIdx = zerosIdx[jumpIdx+1].astype(int)
+    return trigIdx, releaseIdx
 
-def separateIntoTriggers(signal, trigIdx, width=30):
+def separateIntoTriggers(signal, trigIdx, releaseIdx, width=30):
     triggers = []
-    for i in trigIdx:
+    releases = []
+    for i, j in zip(trigIdx, releaseIdx):
         triggers.append(signal[i:i+width])
-    return np.array(triggers)
+        releases.append(signal[j-width:j])
+    return np.array(triggers), np.array(releases) 
 
 
 def plotTriggers(triggers, name):
@@ -50,28 +53,33 @@ def plotSignal(signal):
 key = "C1"
 signal = data[key][0]
 print(signal.shape)
-trigIdx = findTrigIdxs(signal)
-triggers = separateIntoTriggers(signal, trigIdx)
+trigIdx, relIdx = findTrigIdxs(signal)
+triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
 plotSignal(signal)
 plotTriggers(triggers, key) 
+plotTriggers(releases, key)
 
 #%%
 key = "C2"
 signal = data[key][0]
-trigIdx = findTrigIdxs(signal, threshold=1)
-triggers = separateIntoTriggers(signal, trigIdx)
+print(signal.shape)
+trigIdx, relIdx = findTrigIdxs(signal, threshold=1)
+triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
 plotSignal(signal)
 plotTriggers(triggers, key) 
+plotTriggers(releases, key)
 
 #%%
 # Filter data into triggers and save it
 filteredData = {}
 for key in data:
     signal = data[key].flatten()
-    trigIdx = findTrigIdxs(signal, threshold=1)
-    triggers = separateIntoTriggers(signal, trigIdx)
-    filteredData[key] = triggers
+    trigIdx, relIdx = findTrigIdxs(signal, threshold=1)
+    triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
+    filteredData[key+"_triggers"] = triggers
+    filteredData[key+"_releases"] = releases 
     print("saving ", triggers.shape)
+    print("saving ", releases.shape)
 
 savePath = "./triggers_data.npz"
 np.savez(savePath, **filteredData)
