@@ -1,4 +1,4 @@
-#%%
+# %%
 # This mounts your Google Drive to the Colab VM.
 # from google.colab import drive
 # drive.mount('/content/drive')
@@ -15,47 +15,21 @@
 # sys.path.append('/content/drive/My Drive/{}'.format(FOLDERNAME))
 #
 
-#%%
+# %%
 # Load triggers data
 
 import numpy as np 
 from sklearn.model_selection import train_test_split
+from core_functions import load_data 
 
-data = np.load("./second_collection_triggs_rels.npz")
+dataPath = "./second_collection_triggs_rels.npz"
+Xraw, yraw = load_data(dataPath) 
 
-triggers_only = True 
-releases_only = False 
-assert not(triggers_only & releases_only), "Can only pick one at one time"
-
-# Some clunky code below
-# Check the numner of different users
-users = []
-for key in data:
-    user, mode = key.split("_")
-    users.append(user)
-users = np.array(users, dtype=str)
-users = np.unique(users)
-
-Xraw = []
-yraw = []
-for key in data:
-    user, mode = key.split("_")
-    if triggers_only and (mode=="releases"): continue
-    if releases_only and (mode=="triggers"): continue
-    
-    sig = data[key]
-    Xraw.append(sig)
-
-    # lab = int(user[1])-1  # Number for identifying user
-    yraw.append(np.full(len(sig), np.argwhere(users==user)[0]))
-
-Xraw = np.concatenate(Xraw)
-yraw = np.concatenate(yraw)
 print("Raw data shape: ", Xraw.shape)
 print("Labels shape: ", yraw.shape)
 print("Unique labels: ", np.unique(yraw))
 
-#%% 
+# %%
 # Split data into test  and train set
 Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
 print("Size of test set:", Xtest.shape)
@@ -71,7 +45,7 @@ for i in range(nplots):
     plt.plot(range(len(Xtrain[i])), Xtrain[i], "b.")
     plt.title(f"User: {ytrain[i]}")
 
-#%% Option to normalize data
+# %% Option to normalize data
 # The normalization should always be relative to the train set but I this simple norm is okay for nowk 
 # Skip this cell to try unormalised data
 def normalize(x):   
@@ -83,7 +57,7 @@ Xtrain = normalize(Xtrain)
 Xtest = normalize(Xtest)
 
 
-#%%
+# %%
 # Try to code a simple network
 import torch
 
@@ -121,7 +95,7 @@ def trainModel(model, loss_fn, optimizer, x, y, N=1000):
                 print(f"Iteration {t}\nLoss: {loss.item()}")
                 checkAcc(x, y, model)
 
-#%% 
+# %%
 # Pass data to tensors
 x = torch.tensor(Xtrain, device=device, dtype=dtype)
 y = torch.tensor(ytrain, device=device, dtype=torch.long)
@@ -129,7 +103,7 @@ y = torch.tensor(ytrain, device=device, dtype=torch.long)
 xt= torch.tensor(Xtest, device=device, dtype=dtype)
 yt= torch.tensor(ytest, device=device, dtype=torch.long)
 
-#%% 
+# %%
 # Simple Fully Connected NN
 # Gets 0.7 accuracy after 10000 iterations, but performs better with unormalised parameters (0.8)
 N, D_in, H, D_out = len(Xtrain), 30, 1000, 3 
@@ -144,17 +118,17 @@ model = torch.nn.Sequential(
 loss_fn = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-trainModel(model, loss_fn, optimizer, x, y, 5000)
+trainModel(model, loss_fn, optimizer, x, y, 1000)
 # Test model on test data
 with torch.no_grad():
     checkAcc(xt, yt, model, set="\nTest")
 
-#%%
+# %%
 # To run convolutions, need to modify shape of input
 x = x.view(x.shape[0], 1, x.shape[1])
 xt = xt.view(xt.shape[0], 1, xt.shape[1])
 
-#%%
+# %%
 # NN with 2 Convolution Layers
 # Performs best with normalised data, but still works with unormalised
 # Currently overfitting data from second_collection
@@ -197,12 +171,12 @@ loss_fn = torch.nn.CrossEntropyLoss()
 # optim_deep = torch.optim.SGD(model_deep.parameters(), lr=1e-3, momentum=0.9)
 optim_deep = torch.optim.Adam(model_deep.parameters(), lr=1e-3)
 
-trainModel(model_deep, loss_fn, optim_deep, x, y, 5000)
+trainModel(model_deep, loss_fn, optim_deep, x, y, 1000)
 with torch.no_grad():
     checkAcc(xt, yt, model_deep, set="\nTest")
 
 
-#%%
+# %%
 import matplotlib.pyplot as plt
 
 def plotTest(Xtest, ytest, predictions, misclassifications_only=True):
@@ -215,10 +189,10 @@ def plotTest(Xtest, ytest, predictions, misclassifications_only=True):
 
         X1 = Xtest[usr]
         labels = ytest[usr]
-        plt.figure(figsize=(15, 5))
+        plt.figure(figsize=(20, 20))
         plt.suptitle(f"Predictions for user {j}")
         for i, (x, lab) in enumerate(zip(X1, labels)):
-            plt.subplot(1, len(X1), i+1)
+            plt.subplot(int(np.ceil(np.sqrt(len(X1)))), int(np.ceil(np.sqrt(len(X1)))), i+1)
             plt.plot(range(len(x)), x, "b.")
             plt.title(f"Real User: {lab}")
 
@@ -230,9 +204,8 @@ with torch.no_grad():     # Very important to specify no_grad to avoid automatic
     predictions = preds.detach().numpy()
 
 plotTest(Xtest, ytest, predictions)
-# plt.show()
 
-#%%
+# %%
 # Plot misclassifications from training
 with torch.no_grad():     # Very important to specify no_grad to avoid automatic differentiation of this step
     scores = model_deep(x)
