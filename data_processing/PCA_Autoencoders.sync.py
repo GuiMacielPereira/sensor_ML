@@ -53,13 +53,34 @@ for i in range(10):
 plt.show()
 
 from mpl_toolkits.mplot3d import Axes3D
-trans, recon = pca_transform(3)
+trans3d, recon3d = pca_transform(3)
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(trans[:,0], trans[:,1], trans[:,2], c=ytrain)
+ax.scatter(trans3d[:,0], trans3d[:,1], trans3d[:,2], c=ytrain)
 plt.show()
 
+#%%
+# Look at points that seem like anomalies
 
+# Implement spectral clustering since clusters are not spherical 
+from scipy.spatial.distance import cdist
+from sklearn.cluster import spectral_clustering 
+
+sigma = 0.2
+W = np.exp(-0.5*cdist(trans, trans, 'sqeuclidean')/sigma**2)
+sc_clusters = spectral_clustering(W, n_clusters=2)
+plt.scatter(trans[:, 0], trans[:, 1], c=sc_clusters)
+plt.show()
+
+#%%
+# Plot some of the anomaly points
+anom = Xtrain[sc_clusters==1]
+
+plt.figure(figsize=(15, 15))
+for i in range(25):
+    plt.subplot(5, 5, i+1)
+    plt.scatter(range(anom[i].size), anom[i])
+plt.show()
 
 #%%
 # Auto Encoder

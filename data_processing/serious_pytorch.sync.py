@@ -1,9 +1,9 @@
-#%%
+# %%
 # Notebook to explore more serious convolutional networks 
 # i.e. includes analysis of training and test accuracies
 # and more convolutional layers involved
 
-#%%
+# %%
 # Usual loading of recorded data
 from sklearn.model_selection import train_test_split
 from core_functions import load_data
@@ -14,12 +14,14 @@ Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, rand
 Xtrain, Xval, ytrain, yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
 def normalize(x):   
-    return x / np.max(x, axis=1)[:, np.newaxis]
+    # Hard code a value based on the training set
+    # xmax = np.mean(np.max(Xtrain, axis=1))     # Hard coding the normalization severely affects validation accuracy
+    xmax = np.max(x, axis=1)[:, np.newaxis]
+    return x / xmax 
 
 Xtrain = normalize(Xtrain) 
 Xtest = normalize(Xtest)
 Xval = normalize(Xval)
-
 
 print("Raw data shape: ", Xraw.shape)
 print("Labels shape: ", yraw.shape)
@@ -30,12 +32,15 @@ print("Size of validation set:", Xval.shape)
 print("Fraction of single class in test set: ", np.mean(ytest==0))
 print("\nTrain, Test and Validation set were normalized!")
 
-# Build datasets in correct format
-trainset = [[np.array(x)[np.newaxis, :], y] for (x, y) in zip(Xtrain, ytrain)]
-valset = [[np.array(x)[np.newaxis, :], y] for (x, y) in zip(Xval, yval)]
-testset = [[np.array(x)[np.newaxis, :], y] for (x, y) in zip(Xtest, ytest)]
+def buildDataset(X, y):
+    """Builds dataset to be compatible with PyTorch"""
+    return [[np.array(x)[np.newaxis, :], y] for (x, y) in zip(X, y)]
 
-#%%
+trainset = buildDataset(Xtrain, ytrain)
+# valset = buildDataset(Xval, yval) 
+# testset = buildDataset(Xtest, ytest) 
+
+# %%
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -54,18 +59,15 @@ max_epochs = 4
 print("Using Device: ", device)
 
 # General function for training each model
-def trainModel(model, trainset, batch_size=32, learning_rate=1e-3, max_epochs=20):
+def trainModel(model, trainset, batch_size=32, learning_rate=5e-4, max_epochs=20):
     """General training procedure for all models"""
 
     # Build data loader to seperate data into batches
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-
     # Use same criterion for all models, cross entropy is good for classification problems
     criterion = nn.CrossEntropyLoss()       
     #Choose the Adam optimiser
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-    # Use a scheduler to update learning rates after each epoch, same for all models
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)  
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
     # Pass to GPU if available
     model = model.to(device)
@@ -97,9 +99,7 @@ def trainModel(model, trainset, batch_size=32, learning_rate=1e-3, max_epochs=20
                 losses.append(loss.item())
                 acc = getAcc(model)    
                 accuracies.append(acc)
-                print(f"Epoch {epoch+1}, Batch {i+1}: loss={loss.item():.3f}, train={acc[0]*100:.1f}%, val={acc[1]*100:.1f}%, test={acc[2]*100:.1f}%")
-        
-        scheduler.step()
+                print(f"Epoch {epoch+1}, Batch {i+1}: loss={loss.item():5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
 
     print("Training Complete!")
     return np.array(losses), np.array(accuracies)
@@ -116,27 +116,33 @@ def weight_init(m):
         nn.init.zeros_(m.bias)
 
 
-xtr = torch.tensor(Xtrain[:, np.newaxis, :], dtype=dtype)
-ytr = torch.tensor(ytrain, dtype=torch.long)
-xv = torch.tensor(Xval[:, np.newaxis, :], dtype=dtype)
-yv = torch.tensor(yval, dtype=torch.long)
-xte = torch.tensor(Xtest[:, np.newaxis, :], dtype=dtype)
-yte = torch.tensor(ytest, dtype=torch.long)
+def toTensor(X, y):
+    xt = torch.tensor(X[:, np.newaxis, :], dtype=dtype)
+    yt = torch.tensor(y, dtype=torch.long)
+    return xt, yt 
 
-def getAcc(model):
+xtr, ytr = toTensor(Xtrain, ytrain)
+xv, yv = toTensor(Xval, yval)
+xte, yte = toTensor(Xtest, ytest)
+
+def getAcc(model, test=False):
     """
     Returns accuracies of training data trainloader and test data valloader
     Uses zip, so that the number of points in the training data will match validation data.
     """
     with torch.no_grad():  # Avoid computing the gradients
-        accs = np.zeros(3)   # Sore accuracies for train, val and test
-        for i, (x, y) in enumerate([[xtr, ytr], [xv, yv], [xte, yte]]):
+
+        def acc(x, y):
             out = model(x)
             _, pred = torch.max(out.data, 1)
-            accs[i] = (pred==y).detach().numpy().mean()
-    return accs
+            return (pred==y).detach().numpy().mean()
 
-#%%
+        if test:
+            return [acc(xte, yte)]
+        return [acc(xtr, ytr), acc(xv, yv)]
+
+
+# %%
 # Convolutional architecture with 3 layers
 # Investigate how number of channels and kernel size changes the results
 class CNN2(nn.Module):    
@@ -182,9 +188,9 @@ channels = [16, 16, 16]      # Keep sizes of channels the same because there is 
 # Test different sizes of hidden layers 
 h_neurons = [300, 200]
 # Test different rates of Dropout
-p_drop = [[0.4, 0.2, 0.2], [0, 0, 0], [0.2, 0.1, 0.1]]
+p_drop = [[0, 0, 0]]
 
-#%%
+# %%
 #Run training of models 
 
 # Initialize results
@@ -194,7 +200,7 @@ for i, pp in enumerate(p_drop):
     model = CNN2(channels, kernels, h_neurons, pp)
 
     # Train
-    losses, accuracies = trainModel(model, trainset, batch_size=32, max_epochs=20)
+    losses, accuracies = trainModel(model, trainset, batch_size=64, max_epochs=30)
 
     models.append(model)
     models_losses.append(losses)
@@ -202,7 +208,7 @@ for i, pp in enumerate(p_drop):
     models_label.append(f"model {i}, dropout={pp}")
 
 
-#%%
+# %%
 # Plot results from training
 def plotAcc(models_label, models_acc):
     """ Plot validation accuracies to determine best model """
@@ -217,9 +223,9 @@ def plotAcc(models_label, models_acc):
     plt.xlabel("Epochs")
 
     plt.figure(figsize=(8, 5))
-    plt.title("Test Accuracy")
+    plt.title("Train Accuracy")
     for lab, accs in zip(models_label, models_acc):
-        valacc = accs[:, 2]
+        valacc = accs[:, 0]
         plt.plot(np.linspace(0, max_epochs, len(valacc)), valacc, label=lab)
     plt.legend()
     plt.xlabel("Epochs")
@@ -244,7 +250,8 @@ def bestModelAcc(models_acc):
     """
 
     best_acc_idx = np.argmax([acc[-1, -1] for acc in models_acc])
-    best_acc = models_acc[best_acc_idx][-1, -1]
+    best_model = models[best_acc_idx]
+    best_acc = getAcc(best_model, test=True)[0]
     print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
     return best_acc 
 
