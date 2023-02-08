@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from core_functions import load_data
 import numpy as np
 
-Xraw, yraw = load_data("./second_collection_triggs_rels.npz")
+Xraw, yraw = load_data("./second_collection_triggs_rels_32.npz")
 
 print("Raw data shape: ", Xraw.shape)
 print("Labels shape: ", yraw.shape)
 print("Unique labels: ", np.unique(yraw))
 
-Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
+XtrainR, XtestR, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
 print("Size of test set:", Xtest.shape)
 print("Size of train set:", Xtrain.shape)
 print("Fraction of single class in test set: ", np.mean(ytest==0))
@@ -22,8 +22,8 @@ print("Fraction of single class in test set: ", np.mean(ytest==0))
 def normalize(x):   
     return x / np.max(x, axis=1)[:, np.newaxis]
 
-Xtrain = normalize(Xtrain) 
-Xtest = normalize(Xtest)
+Xtrain = normalize(XtrainR) 
+Xtest = normalize(XtestR)
 print("\nTrain and Test set were normalized!")
 
 #%%
@@ -74,9 +74,10 @@ plt.show()
 
 #%%
 # Plot some of the anomaly points
-anom = Xtrain[sc_clusters==1]
+anom = XtrainR[sc_clusters==1]
+print("Number of anomalies: ", len(anom))
 
-plt.figure(figsize=(15, 15))
+plt.figure(figsize=(20, 20))
 for i in range(25):
     plt.subplot(5, 5, i+1)
     plt.scatter(range(anom[i].size), anom[i])
@@ -140,7 +141,7 @@ class AutoEnc2D(nn.Module):
             nn.ReLU(),
             nn.ConvTranspose1d(64, 32, 3, stride=2, padding=1, output_padding=1),
             nn.ReLU(),
-            nn.ConvTranspose1d(32, 16, 3, stride=2, padding=1, output_padding=0),
+            nn.ConvTranspose1d(32, 16, 3, stride=2, padding=1, output_padding=1),
             nn.ReLU(),
             nn.ConvTranspose1d(16, 1, 3, stride=2, padding=1, output_padding=1),
             nn.Sigmoid()  #to range [0, 1]

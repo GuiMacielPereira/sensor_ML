@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from core_functions import load_data
 import numpy as np
 
-Xraw, yraw = load_data("./second_collection_triggs_rels.npz")
+Xraw, yraw = load_data("./second_collection_triggs_rels_32.npz")
 Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
 Xtrain, Xval, ytrain, yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
@@ -55,11 +55,10 @@ else:
     device = torch.device('cpu')
 dtype = torch.float32
 
-max_epochs = 4
 print("Using Device: ", device)
 
 # General function for training each model
-def trainModel(model, trainset, batch_size=32, learning_rate=5e-4, max_epochs=20):
+def trainModel(model, trainset, batch_size=32, learning_rate=5e-4, max_epochs=20, weight_decay=1e-4):
     """General training procedure for all models"""
 
     # Build data loader to seperate data into batches
@@ -67,7 +66,7 @@ def trainModel(model, trainset, batch_size=32, learning_rate=5e-4, max_epochs=20
     # Use same criterion for all models, cross entropy is good for classification problems
     criterion = nn.CrossEntropyLoss()       
     #Choose the Adam optimiser
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     # Pass to GPU if available
     model = model.to(device)
@@ -190,9 +189,7 @@ h_neurons = [300, 200]
 # Test different rates of Dropout
 p_drop = [[0, 0, 0]]
 
-# %%
-#Run training of models 
-
+#Run training  
 # Initialize results
 models, models_losses, models_acc, models_label = [], [], [], []
 for i, pp in enumerate(p_drop):
@@ -207,6 +204,47 @@ for i, pp in enumerate(p_drop):
     models_acc.append(accuracies)
     models_label.append(f"model {i}, dropout={pp}")
 
+# %%
+# Model with usual halving of image size and doubling the depth
+class CNN_STANDARD(nn.Module):    
+    def __init__(self):
+        super(CNN_STANDARD, self).__init__()
+
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(16 * 4, 384),
+            nn.ReLU(),
+            nn.Linear(384, 128),
+            nn.ReLU(),
+            nn.Linear(128, 3)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
+
+# Run training
+models, models_losses, models_acc, models_label = [], [], [], []
+for i, wd in enumerate([1e-4]):
+
+    model = CNN_STANDARD() 
+
+    # Train
+    losses, accuracies = trainModel(model, trainset, learning_rate=5e-3, batch_size=128, max_epochs=100, weight_decay=wd)
+
+    models.append(model)
+    models_losses.append(losses)
+    models_acc.append(accuracies)
+    models_label.append(f"model {i}, wd={wd}")
 
 # %%
 # Plot results from training
@@ -217,7 +255,7 @@ def plotAcc(models_label, models_acc):
     plt.title("Validation Accuracy")
     for lab, accs in zip(models_label, models_acc):
         valacc = accs[:, 1]
-        plt.plot(np.linspace(0, max_epochs, len(valacc)), valacc, label=lab)
+        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
     plt.legend()
     plt.ylabel("Accuracy")
     plt.xlabel("Epochs")
@@ -226,7 +264,7 @@ def plotAcc(models_label, models_acc):
     plt.title("Train Accuracy")
     for lab, accs in zip(models_label, models_acc):
         valacc = accs[:, 0]
-        plt.plot(np.linspace(0, max_epochs, len(valacc)), valacc, label=lab)
+        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
     plt.legend()
     plt.xlabel("Epochs")
 
@@ -237,7 +275,7 @@ def plotLosses(models_label, models_losses):
     plt.figure(figsize=(8, 5))
     plt.title("Training Loss")
     for lab, loss in zip(models_label, models_losses):
-        plt.plot(np.linspace(0, max_epochs, len(loss)), loss, label=lab)
+        plt.plot(np.linspace(0, len(loss), len(loss)), loss, label=lab)
     plt.legend()
     plt.ylabel("Loss")
     plt.xlabel("Epochs")

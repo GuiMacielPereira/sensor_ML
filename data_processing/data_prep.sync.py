@@ -5,8 +5,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Width of triggers 
+width = 32
 fileName = "second_collection"
-output = fileName + "_triggs_rels.npz"
+output = fileName + "_triggs_rels" + f"_{width}.npz"
 
 data = np.load((fileName+".npz"))
 
@@ -26,7 +28,7 @@ def findTrigIdxs(signal, threshold=0.1):
     return trigIdx, releaseIdx
 
 
-def separateIntoTriggers(signal, trigIdx, releaseIdx, width=30):
+def separateIntoTriggers(signal, trigIdx, releaseIdx, width=width):
     triggers = []
     releases = []
     for i, j in zip(trigIdx, releaseIdx):
@@ -77,7 +79,7 @@ plotTriggers(releases)
 filteredData = {}
 for key in data:
     signal = data[key].flatten()
-    trigIdx, relIdx = findTrigIdxs(signal, threshold=1)
+    trigIdx, relIdx = findTrigIdxs(signal, threshold=2)
     triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
     filteredData[key+"_triggers"] = triggers
     filteredData[key+"_releases"] = releases 
