@@ -1,147 +1,121 @@
 # %%
 # Notebook to explore more serious convolutional networks 
 # i.e. includes analysis of training and test accuracies
-# and more convolutional layers involved
+
+
 
 # %%
-# Usual loading of recorded data
-from sklearn.model_selection import train_test_split
-from core_functions import load_data
 import numpy as np
-
-Xraw, yraw = load_data("./second_collection_triggs_rels_32.npz")
-Xtrain, Xtest, ytrain, ytest = train_test_split(Xraw, yraw, test_size=0.15, random_state=42)
-Xtrain, Xval, ytrain, yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
-
-def normalize(x):   
-    # Hard code a value based on the training set
-    # xmax = np.mean(np.max(Xtrain, axis=1))     # Hard coding the normalization severely affects validation accuracy
-    xmax = np.max(x, axis=1)[:, np.newaxis]
-    return x / xmax 
-
-Xtrain = normalize(Xtrain) 
-Xtest = normalize(Xtest)
-Xval = normalize(Xval)
-
-print("Raw data shape: ", Xraw.shape)
-print("Labels shape: ", yraw.shape)
-print("Unique labels: ", np.unique(yraw))
-print("Size of test set:", Xtest.shape)
-print("Size of train set:", Xtrain.shape)
-print("Size of validation set:", Xval.shape)
-print("Fraction of single class in test set: ", np.mean(ytest==0))
-print("\nTrain, Test and Validation set were normalized!")
-
-def buildDataset(X, y):
-    """Builds dataset to be compatible with PyTorch"""
-    return [[np.array(x)[np.newaxis, :], y] for (x, y) in zip(X, y)]
-
-trainset = buildDataset(Xtrain, ytrain)
-# valset = buildDataset(Xval, yval) 
-# testset = buildDataset(Xtest, ytest) 
-
-# %%
 import matplotlib.pyplot as plt
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-from torch.utils.data import DataLoader
+from core_functions import SensorSignals
 
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-dtype = torch.float32
+# Model with usual halving of image size and doubling the depth
+class CNN_STANDARD(nn.Module):    
+    def __init__(self):
+        super(CNN_STANDARD, self).__init__()
 
-print("Using Device: ", device)
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(16 * 4, 384),
+            nn.ReLU(),
+            nn.Linear(384, 128),
+            nn.ReLU(),
+            nn.Linear(128, 3)
+        )
 
-# General function for training each model
-def trainModel(model, trainset, batch_size=32, learning_rate=5e-4, max_epochs=20, weight_decay=1e-4):
-    """General training procedure for all models"""
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
 
-    # Build data loader to seperate data into batches
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-    # Use same criterion for all models, cross entropy is good for classification problems
-    criterion = nn.CrossEntropyLoss()       
-    #Choose the Adam optimiser
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+# %%
+dataPath = "./second_collection_triggs_rels_32.npz"
+S = SensorSignals(dataPath) 
+S.split_data()
+S.norm_X()
+S.setup_tensors()
+S.print_shapes()
 
-    # Pass to GPU if available
-    model = model.to(device)
-    # Apply the same initialization every time for reproducibility
-    model.apply(weight_init)
+models, models_losses, models_acc, models_label = [], [], [], []
+for i, wd in enumerate([1e-4]):
+
+    model = CNN_STANDARD() 
+
+    # Train
+    S.train_model(model, learning_rate=5e-3, batch_size=128, max_epochs=20, weight_decay=wd)
+
+    models.append(model)
+    models_losses.append(S.losses)
+    models_acc.append(S.accuracies)
+    models_label.append(f"model {i}, wd={wd}")
+
+# %%
+# Plot results from training
+def plotAcc(models_label, models_acc):
+    """ Plot validation accuracies to determine best model """
+
+    plt.figure(figsize=(8, 5))
+    plt.title("Validation Accuracy")
+    for lab, accs in zip(models_label, models_acc):
+        valacc = accs[:, 1]
+        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
+    plt.legend()
+    plt.ylabel("Accuracy")
+    plt.xlabel("Epochs")
+
+    plt.figure(figsize=(8, 5))
+    plt.title("Train Accuracy")
+    for lab, accs in zip(models_label, models_acc):
+        valacc = accs[:, 0]
+        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
+    plt.legend()
+    plt.xlabel("Epochs")
+
+
+def plotLosses(models_label, models_losses):
+    """ Plot validation accuracies to determine best model """
+
+    plt.figure(figsize=(8, 5))
+    plt.title("Training Loss")
+    for lab, loss in zip(models_label, models_losses):
+        plt.plot(np.linspace(0, len(loss), len(loss)), loss, label=lab)
+    plt.legend()
+    plt.ylabel("Loss")
+    plt.xlabel("Epochs")
     
-    losses = []        # Track loss function
-    accuracies = []    # Track train, validation and test accuracies
-    for epoch in range(max_epochs):  # Loop over the dataset multiple times
-
-        for i, (sig, y) in enumerate(train_loader):   # sig and y are batches 
-            model.train() # Explicitly set to model to training 
-
-            # Pass arrays to GPU
-            sig = sig.to(device, dtype=dtype)
-            y = y.to(device, dtype=torch.long)
-
-            # Zero the parameter gradients
-            optimizer.zero_grad()
-
-            # Forward + Backward + Optimize
-            outputs = model(sig)
-            loss = criterion(outputs, y)
-            loss.backward()
-            optimizer.step()
-            
-            # Store results
-            if i % 100 == 0:
-                losses.append(loss.item())
-                acc = getAcc(model)    
-                accuracies.append(acc)
-                print(f"Epoch {epoch+1}, Batch {i+1}: loss={loss.item():5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
-
-    print("Training Complete!")
-    return np.array(losses), np.array(accuracies)
-
-
-def weight_init(m):
+    
+def bestModelAcc(models_acc):
     """
-    Method to insure that weights of each layer are initialized always to 
-    the same values for reproducibiity
+    Prints test accuracy of best model
+    Returns model that yields the best test accuracy
     """
-    if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d):
-        torch.manual_seed(180200742)
-        nn.init.kaiming_normal_(m.weight)     # Read somewhere that Kaiming initialization is advisable
-        nn.init.zeros_(m.bias)
 
+    best_acc_idx = np.argmax([acc[-1, -1] for acc in models_acc])
+    best_model = models[best_acc_idx]
+    best_acc = S.acc_te(best_model)
+    print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
+    return best_acc 
 
-def toTensor(X, y):
-    xt = torch.tensor(X[:, np.newaxis, :], dtype=dtype)
-    yt = torch.tensor(y, dtype=torch.long)
-    return xt, yt 
+# Plot
+plotAcc(models_label, models_acc)
+plotLosses(models_label, models_losses)
+# Print accuracy
+acc_best_FC = bestModelAcc(models_acc)
 
-xtr, ytr = toTensor(Xtrain, ytrain)
-xv, yv = toTensor(Xval, yval)
-xte, yte = toTensor(Xtest, ytest)
-
-def getAcc(model, test=False):
-    """
-    Returns accuracies of training data trainloader and test data valloader
-    Uses zip, so that the number of points in the training data will match validation data.
-    """
-    with torch.no_grad():  # Avoid computing the gradients
-
-        def acc(x, y):
-            out = model(x)
-            _, pred = torch.max(out.data, 1)
-            return (pred==y).detach().numpy().mean()
-
-        if test:
-            return [acc(xte, yte)]
-        return [acc(xtr, ytr), acc(xv, yv)]
+# TODO: For some reason the weights are not initializing to the same values
 
 
 # %%
+# TODO: Clean this cell with new code 
 # Convolutional architecture with 3 layers
 # Investigate how number of channels and kernel size changes the results
 class CNN2(nn.Module):    
@@ -204,97 +178,3 @@ for i, pp in enumerate(p_drop):
     models_acc.append(accuracies)
     models_label.append(f"model {i}, dropout={pp}")
 
-# %%
-# Model with usual halving of image size and doubling the depth
-class CNN_STANDARD(nn.Module):    
-    def __init__(self):
-        super(CNN_STANDARD, self).__init__()
-
-        self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-        )
-        self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(16 * 4, 384),
-            nn.ReLU(),
-            nn.Linear(384, 128),
-            nn.ReLU(),
-            nn.Linear(128, 3)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.shape[0], -1)
-        x = self.fc(x)
-        return x
-
-# Run training
-models, models_losses, models_acc, models_label = [], [], [], []
-for i, wd in enumerate([1e-4]):
-
-    model = CNN_STANDARD() 
-
-    # Train
-    losses, accuracies = trainModel(model, trainset, learning_rate=5e-3, batch_size=128, max_epochs=100, weight_decay=wd)
-
-    models.append(model)
-    models_losses.append(losses)
-    models_acc.append(accuracies)
-    models_label.append(f"model {i}, wd={wd}")
-
-# %%
-# Plot results from training
-def plotAcc(models_label, models_acc):
-    """ Plot validation accuracies to determine best model """
-
-    plt.figure(figsize=(8, 5))
-    plt.title("Validation Accuracy")
-    for lab, accs in zip(models_label, models_acc):
-        valacc = accs[:, 1]
-        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
-    plt.legend()
-    plt.ylabel("Accuracy")
-    plt.xlabel("Epochs")
-
-    plt.figure(figsize=(8, 5))
-    plt.title("Train Accuracy")
-    for lab, accs in zip(models_label, models_acc):
-        valacc = accs[:, 0]
-        plt.plot(np.linspace(0, len(valacc), len(valacc)), valacc, label=lab)
-    plt.legend()
-    plt.xlabel("Epochs")
-
-
-def plotLosses(models_label, models_losses):
-    """ Plot validation accuracies to determine best model """
-
-    plt.figure(figsize=(8, 5))
-    plt.title("Training Loss")
-    for lab, loss in zip(models_label, models_losses):
-        plt.plot(np.linspace(0, len(loss), len(loss)), loss, label=lab)
-    plt.legend()
-    plt.ylabel("Loss")
-    plt.xlabel("Epochs")
-    
-    
-def bestModelAcc(models_acc):
-    """
-    Prints test accuracy of best model
-    Returns model that yields the best test accuracy
-    """
-
-    best_acc_idx = np.argmax([acc[-1, -1] for acc in models_acc])
-    best_model = models[best_acc_idx]
-    best_acc = getAcc(best_model, test=True)[0]
-    print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
-    return best_acc 
-
-# Plot
-plotAcc(models_label, models_acc)
-plotLosses(models_label, models_losses)
-# Print accuracy
-acc_best_FC = bestModelAcc(models_acc)
