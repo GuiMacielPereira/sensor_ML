@@ -58,7 +58,7 @@ class SensorSignals:
         Method to insure that weights of each layer are initialized always to 
         the same values for reproducibiity
         """
-        if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d):
+        if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv1d):
             torch.manual_seed(180200742)
             torch.nn.init.kaiming_normal_(m.weight)     # Read somewhere that Kaiming initialization is advisable
             torch.nn.init.zeros_(m.bias)
