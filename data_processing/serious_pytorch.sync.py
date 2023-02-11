@@ -34,6 +34,45 @@ class CNN_STANDARD(nn.Module):
         x = self.fc(x)
         return x
 
+
+class CNN_2(nn.Module):    
+    def __init__(self):
+        super(CNN_2, self).__init__()
+
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(4, 4, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(4, 4, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(8, 8, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(8, 8, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(16, 16, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(16, 16, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(16 * 4, 384),
+            nn.ReLU(),
+            nn.Linear(384, 128),
+            nn.ReLU(),
+            nn.Linear(128, 3)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
+
 # %%
 dataPath = "./second_collection_triggs_rels_32.npz"
 S = SensorSignals(dataPath) 
@@ -43,12 +82,10 @@ S.setup_tensors()
 S.print_shapes()
 
 models, models_losses, models_acc, models_label = [], [], [], []
-for i, lr in enumerate([5e-3]):
-
-    model = CNN_STANDARD() 
+for i, model in enumerate([CNN_2(), CNN_STANDARD()]):
 
     # Train
-    S.train_model(model, learning_rate=lr, batch_size=128, max_epochs=50, weight_decay=1e-4)
+    S.train_model(model, learning_rate=5e-3, batch_size=128, max_epochs=100, weight_decay=1e-4)
 
     models.append(model)
     models_losses.append(S.losses)
@@ -60,7 +97,6 @@ for i, lr in enumerate([5e-3]):
 def plotAcc(models_label, models_acc):
     """ Plot validation accuracies to determine best model """
     plt.figure(figsize=(8, 5))
-    plt.title("Validation Accuracy")
     for lab, accs in zip(models_label, models_acc):
         plt.plot(np.arange(accs.shape[0]), accs, label=[lab+", val", lab+", train"])
     plt.legend()
