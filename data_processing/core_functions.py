@@ -120,6 +120,7 @@ class SensorSignals:
 
     def acc_te(self, model):
         return self.acc(model, self.xte, self.yte)
+    
 
 
 def load_data(dataPath, triggers=True, releases=False):
