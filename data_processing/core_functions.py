@@ -4,14 +4,36 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import DataLoader
 from itertools import combinations
+import matplotlib.pyplot as plt
 
 class SensorSignals:
 
     def __init__(self, dataPath, n_channels=1):
-        Xraw, self.yraw = load_data(dataPath)
+        Xraw, yraw = load_data(dataPath)
 
         if n_channels==1:
             self.Xraw = Xraw[:, np.newaxis, :]
+            self.yraw = yraw
+
+        else:
+            np.random.seed(0)
+
+            def get_combinations(X, N):
+
+                result = np.zeros((N, n_channels, *X.shape[1:]))
+                for i in range(N):
+                    result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)] 
+                return result
+                
+            no_combinations = 10000
+            newXraw = []
+            newyraw = []
+            for u in np.unique(yraw):    # Loop over all users 
+                newXraw.append(get_combinations(Xraw[yraw==u], no_combinations))
+                newyraw.append(np.full(no_combinations, u))
+            
+            self.Xraw = np.concatenate(newXraw)
+            self.yraw = np.concatenate(newyraw)
 
 
     def split_data(self):
@@ -80,6 +102,7 @@ class SensorSignals:
         
         self.losses = []        # Track loss function
         self.accuracies = []    # Track train, validation and test accuracies
+        self.epochs = []        # To track progress over epochs
 
         # Build data loader to seperate data into batches
         train_loader = DataLoader(self.trainset, batch_size=batch_size, shuffle=True)
@@ -110,6 +133,7 @@ class SensorSignals:
                     print(f"Epoch {epoch+1}, Batch {i+1}: loss={loss.item():5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
                     self.losses.append(loss.item())
                     self.accuracies.append(acc)
+                    self.epochs.append(epoch+1)
 
         print("Training Complete!")
         self.losses = np.array(self.losses)
@@ -131,6 +155,63 @@ class SensorSignals:
     def acc_te(self, model):
         return self.acc(model, self.xte, self.yte)
     
+
+    def train_multiple_models(self, models, learning_rate, weight_decay, batch_size, max_epochs):
+
+        # Transform single values into arrays
+        def toArray(arg):
+            if ~isinstance(arg, list):
+                return np.full(len(models), arg)
+            return arg
+        
+        learning_rate = toArray(learning_rate)
+        weight_decay = toArray(weight_decay)
+
+
+        self.models_label = [f"model {i}" for i in range(len(models))]
+        self.models = models
+        self.models_loss = [] 
+        self.models_acc = [] 
+
+        for model, lr, wd  in zip(self.models, learning_rate, weight_decay):
+            
+            self.train_model(model, learning_rate=lr, weight_decay=wd, batch_size=batch_size, max_epochs=max_epochs )
+
+            self.models_loss.append(self.losses)
+            self.models_acc.append(self.accuracies)
+
+
+    def plotAcc(self):
+        """ Plot validation accuracies to determine best model """
+        plt.figure(figsize=(8, 5))
+        for lab, accs in zip(self.models_label, self.models_acc):
+            plt.plot(self.epochs, accs, label=[lab+", train", lab+", val"])
+        plt.legend()
+        plt.ylabel("Accuracy")
+        plt.xlabel("Epochs")
+
+
+    def plotLosses(self):
+        """ Plot validation accuracies to determine best model """
+        plt.figure(figsize=(8, 5))
+        plt.title("Training Loss")
+        models_loss = np.array(self.models_loss)
+        plt.plot(self.epochs, models_loss.T, label=self.models_label)
+        plt.legend()
+        plt.ylabel("Loss")
+        plt.xlabel("Epochs")
+        
+        
+    def bestModelAcc(self):
+        """
+        Prints test accuracy of best model
+        Chooses model that yields the best validation accuracy
+        S is object containing the data used during training 
+        """
+        best_acc_idx = np.argmax([acc[-1, -1] for acc in self.models_acc])
+        best_model = self.models[best_acc_idx]
+        best_acc = self.acc_te(best_model)
+        print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
 
 
 def load_data(dataPath, triggers=True, releases=False):

@@ -140,78 +140,62 @@ S.print_shapes()
 # with BatchNorm1d
 # lr=1e-2, wd=1e-3
 
-models, models_losses, models_acc, models_label = [], [], [], []
-# for i, (model, lr, wd) in enumerate(zip([CNN_4(), CNN_STANDARD()], [1e-2, 5e-3], [1e-3, 1e-4])):
-for i, model in enumerate([CNN_2()]): 
-    lr = 1e-2
-    wd = 1e-3
-
-    # Train
-    S.train_model(model, learning_rate=lr, batch_size=128, max_epochs=100, weight_decay=wd)
-
-    models.append(model)
-    models_losses.append(S.losses)
-    models_acc.append(S.accuracies)
-    models_label.append(f"model {i}")
-
-# %%
-# Plot results from training
-def plotAcc(models_label, models_acc):
-    """ Plot validation accuracies to determine best model """
-    plt.figure(figsize=(8, 5))
-    for lab, accs in zip(models_label, models_acc):
-        plt.plot(np.arange(accs.shape[0]), accs, label=[lab+", train", lab+", val"])
-    plt.legend()
-    plt.ylabel("Accuracy")
-    plt.xlabel("Epochs")
-
-
-def plotLosses(models_label, models_losses):
-    """ Plot validation accuracies to determine best model """
-    plt.figure(figsize=(8, 5))
-    plt.title("Training Loss")
-    models_losses = np.array(models_losses)
-    plt.plot(np.arange(models_losses.shape[1]), models_losses.T, label=models_label)
-    plt.legend()
-    plt.ylabel("Loss")
-    plt.xlabel("Epochs")
-    
-    
-def bestModelAcc(models, models_acc, S):
-    """
-    Prints test accuracy of best model
-    Chooses model that yields the best validation accuracy
-    S is object containing the data used during training 
-    """
-    best_acc_idx = np.argmax([acc[-1, -1] for acc in models_acc])
-    best_model = models[best_acc_idx]
-    best_acc = S.acc_te(best_model)
-    print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
-    return best_acc 
-
-# Plot
-plotAcc(models_label, models_acc)
-plotLosses(models_label, models_losses)
-# Print accuracy
-bestModelAcc(models, models_acc, S)
+models = [CNN_2(), CNN_3()]
+lr = 1e-2
+wd = 1e-3
+bs = 128
+max_epochs = 50
+S.train_multiple_models(models, learning_rate=lr, weight_decay=wd, batch_size=bs, max_epochs=max_epochs)
 
 #%%
-from itertools import combinations
+S.plotAcc()
+S.plotLosses()
+S.bestModelAcc()
 
-n_channels = 3
-def get_combinations(X, N=10000):
 
-    C = combinations(X, n_channels)
+#%%
+from core_functions import SensorSignals
+import torch.nn as nn
 
-    shape = N + X.shape[1:]
-    print(shape)
-    result = np.zeros(shape)
-    for i in range(N):
-        result[i] = C.__next__()
-    return result
+D = SensorSignals("./second_collection_triggs_rels_32.npz", n_channels=3) 
+print(D.Xraw.shape, D.yraw.shape)
+D.split_data()
+D.norm_X()
+D.setup_tensors()
+D.print_shapes()
 
-X = np.arange(15).reshape(5, 3)
-r = get_combinations(X)
-r
+class CNN_7(nn.Module):    
+    def __init__(self):
+        super(CNN_7, self).__init__()
 
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(3, 8, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(8),
+            nn.ReLU(),
+            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(16),
+            nn.ReLU(),
+            nn.Conv1d(16, 32, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(32 * 4, 256),
+            nn.ReLU(),
+            nn.Linear(256, 3)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
+
+models = [CNN_7()]
+D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=50)
+
+#%%
+S.plotAcc()
+S.plotLosses()
+S.bestModelAcc()
 
