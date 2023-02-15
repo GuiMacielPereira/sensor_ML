@@ -3,28 +3,37 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import DataLoader
+from itertools import combinations
 
 class SensorSignals:
 
-    def __init__(self, dataPath):
-        self.Xraw, self.yraw = load_data(dataPath)
+    def __init__(self, dataPath, n_channels=1):
+        Xraw, self.yraw = load_data(dataPath)
+
+        if n_channels==1:
+            self.Xraw = Xraw[:, np.newaxis, :]
+
 
     def split_data(self):
         Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
         self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
+    
     def norm_X(self):
 
-        def norm(x):
-            # Hard code a value based on the training set
-            # xmax = np.mean(np.max(Xtrain, axis=1))     # Hard coding the normalization severely affects validation accuracy
-            xmax = np.max(x, axis=1)[:, np.newaxis]
-            return x / xmax 
+        # Fix normalisation value
+        xmax = np.mean(np.max(self.Xtrain, axis=-1))     # Hard coding the normalization severely affects validation accuracy
 
-        self.Xtrain = norm(self.Xtrain)
-        self.Xtest = norm(self.Xtest)
-        self.Xval = norm(self.Xval)
-        print("\nTrain, Test and Validation set were normalized!")
+        def norm(x):
+            print(f"Before: {np.mean(np.max(x, axis=-1))}")
+            print(f"Normalizing dataset by {xmax:.2f}")
+            x /= xmax
+            print(f"After: {np.mean(np.max(x, axis=-1))}")
+
+        norm(self.Xtrain)
+        norm(self.Xtest)
+        norm(self.Xval)
+
 
     def setup_tensors(self):
         # Use GPU if available 
@@ -33,7 +42,7 @@ class SensorSignals:
         print("Using Device: ", self.device, ", dtype: ", self.dtype)
 
         def toTensor(X, y):
-            xt = torch.tensor(X[:, np.newaxis, :], dtype=self.dtype)
+            xt = torch.tensor(X, dtype=self.dtype)
             yt = torch.tensor(y, dtype=torch.long)
             return xt, yt 
         
@@ -43,6 +52,7 @@ class SensorSignals:
 
         # Create trainset in the correct format for dataloader
         self.trainset = [[x, y] for (x, y) in zip(self.xtr, self.ytr)]
+
 
     def print_shapes(self):
         print("Raw data shape: ", self.Xraw.shape)

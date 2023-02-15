@@ -39,34 +39,6 @@ class CNN_STANDARD(nn.Module):
         return x
 
 
-class CNN_4(nn.Module):    
-    def __init__(self):
-        super(CNN_4, self).__init__()
-
-        self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(4),
-            nn.ReLU(),
-            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(8),
-            nn.ReLU(),
-            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(16),
-            nn.ReLU(),
-        )
-        self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(16 * 4, 256),
-            nn.ReLU(),
-            nn.Linear(256, 3)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.shape[0], -1)
-        x = self.fc(x)
-        return x
-
-
 class CNN_2(nn.Module):    
     def __init__(self):
         super(CNN_2, self).__init__()
@@ -83,9 +55,9 @@ class CNN_2(nn.Module):
             nn.ReLU(),
         )
         self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(32 * 4, 384),
+            nn.Linear(32 * 4, 256),
             nn.ReLU(),
-            nn.Linear(384, 3)
+            nn.Linear(256, 3)
         )
 
     def forward(self, x):
@@ -95,6 +67,34 @@ class CNN_2(nn.Module):
         return x
 
 
+class CNN_3(nn.Module):    
+    def __init__(self):
+        super(CNN_3, self).__init__()
+
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(1, 16, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(16),
+            nn.ReLU(),
+            nn.Conv1d(16, 32, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Conv1d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(64 * 4, 256),
+            nn.ReLU(),
+            nn.Linear(256, 3)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
+
+    
 class CNN_5(nn.Module):    
     def __init__(self):
         super(CNN_5, self).__init__()
@@ -142,12 +142,12 @@ S.print_shapes()
 
 models, models_losses, models_acc, models_label = [], [], [], []
 # for i, (model, lr, wd) in enumerate(zip([CNN_4(), CNN_STANDARD()], [1e-2, 5e-3], [1e-3, 1e-4])):
-for i, model in enumerate([CNN_4(), CNN_2()]):
+for i, model in enumerate([CNN_2()]): 
     lr = 1e-2
     wd = 1e-3
 
     # Train
-    S.train_model(model, learning_rate=lr, batch_size=128, max_epochs=200, weight_decay=wd)
+    S.train_model(model, learning_rate=lr, batch_size=128, max_epochs=100, weight_decay=wd)
 
     models.append(model)
     models_losses.append(S.losses)
@@ -194,3 +194,24 @@ plotAcc(models_label, models_acc)
 plotLosses(models_label, models_losses)
 # Print accuracy
 bestModelAcc(models, models_acc, S)
+
+#%%
+from itertools import combinations
+
+n_channels = 3
+def get_combinations(X, N=10000):
+
+    C = combinations(X, n_channels)
+
+    shape = N + X.shape[1:]
+    print(shape)
+    result = np.zeros(shape)
+    for i in range(N):
+        result[i] = C.__next__()
+    return result
+
+X = np.arange(15).reshape(5, 3)
+r = get_combinations(X)
+r
+
+
