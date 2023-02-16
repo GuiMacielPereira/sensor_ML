@@ -158,7 +158,6 @@ from core_functions import SensorSignals
 import torch.nn as nn
 
 D = SensorSignals("./second_collection_triggs_rels_32.npz", n_channels=3) 
-print(D.Xraw.shape, D.yraw.shape)
 D.split_data()
 D.norm_X()
 D.setup_tensors()
@@ -195,7 +194,7 @@ models = [CNN_7()]
 D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=50)
 
 #%%
-S.plotAcc()
-S.plotLosses()
-S.bestModelAcc()
+D.plotAcc()
+D.plotLosses()
+D.bestModelAcc()
 
