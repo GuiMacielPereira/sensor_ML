@@ -125,44 +125,40 @@ class CNN_5(nn.Module):
         x = self.fc(x)
         return x
 
-
 # %%
 dataPath = "./second_collection_triggs_rels_32.npz"
 S = SensorSignals(dataPath) 
 S.split_data()
 S.norm_X()
+S.set_number_channels(1)
 S.setup_tensors()
 S.print_shapes()
 
 # for CNN_STANDARD
 # lr=5e-3, wd=1e-4
-
 # with BatchNorm1d
 # lr=1e-2, wd=1e-3
 
 models = [CNN_2(), CNN_3()]
-lr = 1e-2
-wd = 1e-3
-bs = 128
-max_epochs = 50
-S.train_multiple_models(models, learning_rate=lr, weight_decay=wd, batch_size=bs, max_epochs=max_epochs)
+S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=50)
 
 #%%
 S.plotAcc()
 S.plotLosses()
 S.bestModelAcc()
 
-
 #%%
 from core_functions import SensorSignals
 import torch.nn as nn
 
-D = SensorSignals("./second_collection_triggs_rels_32.npz", n_channels=3) 
+D = SensorSignals("./second_collection_triggs_rels_32.npz") 
 D.split_data()
 D.norm_X()
+D.set_number_channels(3)
 D.setup_tensors()
 D.print_shapes()
 
+#%%
 class CNN_7(nn.Module):    
     def __init__(self):
         super(CNN_7, self).__init__()
@@ -191,10 +187,9 @@ class CNN_7(nn.Module):
         return x
 
 models = [CNN_7()]
-D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=50)
+D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=5)
 
 #%%
 D.plotAcc()
 D.plotLosses()
 D.bestModelAcc()
-

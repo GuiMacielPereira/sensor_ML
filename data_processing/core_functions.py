@@ -8,41 +8,30 @@ import matplotlib.pyplot as plt
 
 class SensorSignals:
 
-    def __init__(self, dataPath, n_channels=1):
-        Xraw, yraw = load_data(dataPath)
-
-        if n_channels==1:
-            self.Xraw = Xraw[:, np.newaxis, :]
-            self.yraw = yraw
-
-        else:
-            np.random.seed(0)
-
-            def get_combinations(X, N):
-
-                result = np.zeros((N, n_channels, *X.shape[1:]))
-                for i in range(N):
-                    result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)] 
-                return result
-                
-            no_combinations = 10000
-            newXraw = []
-            newyraw = []
-            for u in np.unique(yraw):    # Loop over all users 
-                newXraw.append(get_combinations(Xraw[yraw==u], no_combinations))
-                newyraw.append(np.full(no_combinations, u))
-            
-            self.Xraw = np.concatenate(newXraw)
-            self.yraw = np.concatenate(newyraw)
-
+    def __init__(self, dataPath):
+        self.Xraw, self.yraw = load_data(dataPath)
 
     def split_data(self):
         Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
         self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
-    
-    def norm_X(self):
+    def set_number_channels(self, n_channels=1):
 
+        def change_datasets(X, y):
+
+            if n_channels==1:
+                return X[:, np.newaxis, :], y
+            else:
+                np.random.seed(0)
+                return resample_with_replacement(X, y, no_combinations=5*len(X), n_channels=3)
+
+        self.Xtrain, self.ytrain = change_datasets(self.Xtrain, self.ytrain)
+        self.Xtest, self.ytest = change_datasets(self.Xtest, self.ytest)
+        self.Xval, self.yval = change_datasets(self.Xval, self.yval)
+
+
+    def norm_X(self):
+        """Normalise datasets according to fixed value from train set"""
         # Fix normalisation value
         xmax = np.mean(np.max(self.Xtrain, axis=-1))     # Hard coding the normalization severely affects validation accuracy
 
@@ -214,6 +203,31 @@ class SensorSignals:
         print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
 
 
+def resample_with_replacement(X, y, no_combinations, n_channels):
+    """Make samples for a given dataset containing multiple users."""
+
+    newX = []
+    newy = []
+    for u in np.unique(y):    # Loop over all users 
+
+        Xuser = X[y==u]    
+        Xcomb = get_combinations(Xuser, n_channels, no_combinations)
+
+        newX.append(Xcomb)
+        newy.append(np.full(no_combinations, u))
+
+    return np.concatenate(newX), np.concatenate(newy)
+
+
+def get_combinations(X, n_channels, no_combinations):
+    """From X.shape[0] choose n_channels, repeated no_combinations times."""
+
+    result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
+    for i in range(no_combinations):
+        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)] 
+    return result
+
+
 def load_data(dataPath, triggers=True, releases=False):
     data = np.load(dataPath)
 
@@ -237,5 +251,4 @@ def load_data(dataPath, triggers=True, releases=False):
     Xraw = np.concatenate(Xraw)
     yraw = np.concatenate(yraw)
     return Xraw, yraw
-
 
