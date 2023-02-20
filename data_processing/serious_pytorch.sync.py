@@ -139,7 +139,7 @@ S.print_shapes()
 # with BatchNorm1d
 # lr=1e-2, wd=1e-3
 
-models = [CNN_2(), CNN_3()]
+models = [CNN_2()]
 S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=50)
 
 #%%
@@ -187,7 +187,7 @@ class CNN_7(nn.Module):
         return x
 
 models = [CNN_7()]
-D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=5)
+D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=2)
 
 #%%
 D.plotAcc()

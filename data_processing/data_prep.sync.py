@@ -8,22 +8,22 @@ import matplotlib.pyplot as plt
 # Width of triggers 
 width = 32
 fileName = "second_collection"
-output = fileName + "_triggs_rels" + f"_{width}.npz"
-
 data = np.load((fileName+".npz"))
 
 #%%
 # Find signal triggers
-def findTrigIdxs(signal, threshold=0.1):
+def findTrigIdxs(signal):
     """
     Finds the indexes of the signal where the trigger happens
     """
 
-    mask = signal <= threshold
+    mask = signal <= 0.2 
     mask = mask[:, np.newaxis]
-    zerosIdx = np.argwhere(mask)[:, 0].astype(int)
-    jumpIdx = np.argwhere(np.diff(zerosIdx)>1)[:, 0].astype(int)
+    zerosIdx = np.argwhere(mask)[:, 0].astype(int)        # zeros in the signal
+    jumpIdx = np.argwhere(np.diff(zerosIdx)>1)[:, 0].astype(int)   # Non-consecutive zeros
     trigIdx =  zerosIdx[jumpIdx].astype(int)
+    # TODO: Huge mistake when selecting releases!
+    # If using threshold, will select release up until threshold
     releaseIdx = zerosIdx[jumpIdx+1].astype(int)
     return trigIdx, releaseIdx
 
@@ -32,60 +32,72 @@ def separateIntoTriggers(signal, trigIdx, releaseIdx, width=width):
     triggers = []
     releases = []
     for i, j in zip(trigIdx, releaseIdx):
-        triggers.append(signal[i:i+width])
-        releases.append(signal[j-width:j])
+        upSig = signal[i:i+width]
+        if np.any(upSig>=2):
+            triggers.append(upSig) 
+        downSig = signal[j-width:j]
+        releases.append(downSig)
     return np.array(triggers), np.array(releases) 
 
 
-def plotTriggers(triggers):
-    plt.figure(figsize=(15,15))
-    N = len(triggers)
-    for i in range(N):
-        if i+1 > int(np.sqrt(N))**2: continue    # Skip some signals to avoid error due to outside of grid
-        plt.subplot(int(np.sqrt(N)), int(np.sqrt(N)), i+1)
+def plotTriggers(triggers, nx_plots=10, ny_plots=2):
+    plt.figure(figsize=(nx_plots*2, ny_plots*2))
+    for i in range(nx_plots * ny_plots):
+        plt.subplot(ny_plots, nx_plots, i+1)
         trig = triggers[i]
         plt.plot(range(len(trig)), trig, "b.")
+        plt.xticks([])
 
 
-def plotSignal(signal):
-    plt.figure()
+def plotSignal(signal, upTo):
+    plt.figure(figsize=(30, 5))
+    signal = signal[:upTo]
     plt.plot(range(len(signal)), signal, "b.")
     plt.show()
 
 
 #%%
-# Look at a few triggers
+# Look at a few triggers of one of the users
 key = "A"
-signal = data[key][:10000]   # Only a few presses 
-print(signal.shape)
-trigIdx, relIdx = findTrigIdxs(signal, threshold=1)
+signal = data[key]   # Only a few presses 
+print("Signal shape:", signal.shape)
+plotSignal(signal, upTo=10000)
+trigIdx, relIdx = findTrigIdxs(signal)
 triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
-plotSignal(signal)
+print("triggers shape:", triggers.shape)
+print("releases shape: ", releases.shape)
 plotTriggers(triggers) 
 plotTriggers(releases)
 
 #%%
-key = "J"
-signal = data[key][:10000]
-print(signal.shape)
-trigIdx, relIdx = findTrigIdxs(signal, threshold=1)
-triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
-plotSignal(signal)
-plotTriggers(triggers) 
-plotTriggers(releases)
+# Compare the mean and std of the signals for all the users involved
+plt.figure(figsize=(13, 7))
+n_users = len(data)
+for i, key in enumerate(data):
+    trigIdx, relIdx = findTrigIdxs(data[key])
+    triggers, releases = separateIntoTriggers(data[key], trigIdx, relIdx)
+    for j, sig in enumerate([triggers, releases]):
+        plt.subplot(n_users, 2, 2*i+j+1)
+        sigAvg = np.mean(sig, axis=0)
+        sigStd = np.std(sig, axis=0)
+        plt.title(key+" mean+std")
+        plt.errorbar(np.arange(len(sigAvg)), sigAvg, sigStd, fmt="b.")
+        plt.xticks([])
 
 #%%
-# Filter data into triggers and save it
+# Loop to build and save data 
+# Only run if want to update saved file 
 filteredData = {}
 for key in data:
     signal = data[key].flatten()
-    trigIdx, relIdx = findTrigIdxs(signal, threshold=2)
+    trigIdx, relIdx = findTrigIdxs(signal)
     triggers, releases = separateIntoTriggers(signal, trigIdx, relIdx)
     filteredData[key+"_triggers"] = triggers
     filteredData[key+"_releases"] = releases 
-    print("saving trigers: ", triggers.shape)
-    print("saving releases: ", releases.shape)
+    print(f"saving {key}_triggers: ", triggers.shape)
+    print(f"saving {key}_releases: ", releases.shape)
 
+output = fileName + "_triggs_rels" + f"_{triggers.shape[1]}.npz"
 np.savez(output, **filteredData)
 
 

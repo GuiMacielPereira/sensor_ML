@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 class SensorSignals:
 
-    def __init__(self, dataPath):
-        self.Xraw, self.yraw = load_data(dataPath)
+    def __init__(self, dataPath, triggers=True, releases=False):
+        self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
 
     def split_data(self):
         Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
