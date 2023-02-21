@@ -129,11 +129,12 @@ class CNN_5(nn.Module):
 dataPath = "./second_collection_triggs_rels_32.npz"
 S = SensorSignals(dataPath) 
 S.split_data()
-S.norm_X()
-S.set_number_channels(1)
-S.setup_tensors()
+# S.norm_X()
+# S.set_number_channels(1)
+# S.setup_tensors()
 S.print_shapes()
 
+#%%
 # for CNN_STANDARD
 # lr=5e-3, wd=1e-4
 # with BatchNorm1d

@@ -16,16 +16,11 @@ def findTrigIdxs(signal):
     """
     Finds the indexes of the signal where the trigger happens
     """
-
-    mask = signal <= 0.2 
-    mask = mask[:, np.newaxis]
-    zerosIdx = np.argwhere(mask)[:, 0].astype(int)        # zeros in the signal
-    jumpIdx = np.argwhere(np.diff(zerosIdx)>1)[:, 0].astype(int)   # Non-consecutive zeros
-    trigIdx =  zerosIdx[jumpIdx].astype(int)
-    # TODO: Huge mistake when selecting releases!
-    # If using threshold, will select release up until threshold
-    releaseIdx = zerosIdx[jumpIdx+1].astype(int)
-    return trigIdx, releaseIdx
+    zerosIdx = np.argwhere(signal<=0.05)        # Define zero as anything below harcoded value 
+    jumpIdx = np.argwhere(np.diff(zerosIdx[:, 0])>1)   # Non-consecutive zeros
+    trigIdx =  zerosIdx[jumpIdx]
+    releaseIdx = zerosIdx[jumpIdx+1]
+    return trigIdx.flatten(), releaseIdx.flatten()
 
 
 def separateIntoTriggers(signal, trigIdx, releaseIdx, width=width):
@@ -33,10 +28,13 @@ def separateIntoTriggers(signal, trigIdx, releaseIdx, width=width):
     releases = []
     for i, j in zip(trigIdx, releaseIdx):
         upSig = signal[i:i+width]
-        if np.any(upSig>=2):
-            triggers.append(upSig) 
         downSig = signal[j-width:j]
-        releases.append(downSig)
+
+        if np.any(upSig>=2):          # Hardcoded threshold to select only clean signals
+            # TODO: Need to confirm that approach below is matching up triggers to releases correctly
+            triggers.append(upSig) 
+            releases.append(downSig)
+
     return np.array(triggers), np.array(releases) 
 
 

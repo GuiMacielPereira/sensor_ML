@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 class SensorSignals:
 
+    # TODO: Clean up these initial functions to allow Xraw to have two channels: one for triggers and another for releases
     def __init__(self, dataPath, triggers=True, releases=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
 
@@ -229,6 +230,8 @@ def get_combinations(X, n_channels, no_combinations):
 
 
 def load_data(dataPath, triggers=True, releases=False):
+
+    assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
     data = np.load(dataPath)
 
     # Check different users
@@ -238,15 +241,29 @@ def load_data(dataPath, triggers=True, releases=False):
     Xraw = []
     yraw = []
 
-    def appendData(key):
-        Xraw.append(data[key])
-        yraw.append(np.full(len(data[key]), np.argwhere(users==key.split("_")[0])[0]))
+    # def appendData(key):
+    #     Xraw.append(data[key])
+    #     yraw.append(np.full(len(data[key]), np.argwhere(users==key.split("_")[0])[0]))
+    #
+    # for key in data:
+    #     _, mode = key.split("_")
+    #
+    #     if triggers and (mode=="triggers"): appendData(key)
+    #     if releases and (mode=="releases"): appendData(key)
 
-    for key in data:
-        _, mode = key.split("_")
+    # TODO: Need to find a better way to create Xraw with shape (N, 2, 32) or (N, 1, 32)
+    # Depending on using just triggers or triggers+releases
 
-        if triggers and (mode=="triggers"): appendData(key)
-        if releases and (mode=="releases"): appendData(key)
+    for u in users:
+
+        if triggers:
+            Xraw.append(data[u+"_triggers"])
+            yraw.append(np.full(len(data[u+"_triggers"]), np.argwhere(users==u)[0]))
+
+        if releases:
+            Xraw.append(data[u+"_releases"])
+            yraw.append(np.full(len(data[u+"_releases"]), np.argwhere(users==u)[0]))
+
 
     Xraw = np.concatenate(Xraw)
     yraw = np.concatenate(yraw)
