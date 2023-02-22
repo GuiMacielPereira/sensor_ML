@@ -3,12 +3,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import DataLoader
-from itertools import combinations
 import matplotlib.pyplot as plt
 
 class SensorSignals:
 
-    # TODO: Clean up these initial functions to allow Xraw to have two channels: one for triggers and another for releases
     def __init__(self, dataPath, triggers=True, releases=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
 
@@ -16,36 +14,26 @@ class SensorSignals:
         Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
         self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
-    def set_number_channels(self, n_channels=1):
-
-        def change_datasets(X, y):
-
-            if n_channels==1:
-                return X[:, np.newaxis, :], y
-            else:
-                np.random.seed(0)
-                return resample_with_replacement(X, y, no_combinations=5*len(X), n_channels=3)
-
-        self.Xtrain, self.ytrain = change_datasets(self.Xtrain, self.ytrain)
-        self.Xtest, self.ytest = change_datasets(self.Xtest, self.ytest)
-        self.Xval, self.yval = change_datasets(self.Xval, self.yval)
-
-
     def norm_X(self):
         """Normalise datasets according to fixed value from train set"""
         # Fix normalisation value
-        xmax = np.mean(np.max(self.Xtrain, axis=-1))     # Hard coding the normalization severely affects validation accuracy
+        xmax = np.mean(np.max(self.Xtrain, axis=-1, keepdims=True), axis=0, keepdims=True)     # Hard coding the normalization severely affects validation accuracy
+        print(xmax.shape)
 
         def norm(x):
-            print(f"Before: {np.mean(np.max(x, axis=-1))}")
-            print(f"Normalizing dataset by {xmax:.2f}")
+            print(f"Normalizing dataset from {np.mean(np.max(x, axis=-1), axis=0)} to")
             x /= xmax
-            print(f"After: {np.mean(np.max(x, axis=-1))}")
+            print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
         norm(self.Xtrain)
         norm(self.Xtest)
         norm(self.Xval)
 
+    def resample_channels(self):
+        np.random.seed(0)
+        self.Xtrain, self.ytrain = resample_with_replacement(self.Xtrain, self.ytrain)
+        self.Xtest, self.ytest = resample_with_replacement(self.Xtest, self.ytest)
+        self.Xval, self.yval = resample_with_replacement(self.Xval, self.yval)
 
     def setup_tensors(self):
         # Use GPU if available 
@@ -204,30 +192,51 @@ class SensorSignals:
         print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
 
 
-def resample_with_replacement(X, y, no_combinations, n_channels):
+def resample_with_replacement(X, y):
     """Make samples for a given dataset containing multiple users."""
 
+    def make_combinations(X):
+        no_combinations = 5*len(X)
+
+        if X.shape[1]==1:
+            return resample_within_single_channel(X, no_combinations=no_combinations, n_channels=3)
+
+        elif X.shape[1]==2:
+            return resample_two_channels(X, no_combinations=no_combinations)
+        else:
+            raise ValueError("Rsampling currently only suported for n_channels equal to 1 or 2.")
+        
     newX = []
     newy = []
     for u in np.unique(y):    # Loop over all users 
 
         Xuser = X[y==u]    
-        Xcomb = get_combinations(Xuser, n_channels, no_combinations)
+        Xcomb = make_combinations(Xuser)
 
         newX.append(Xcomb)
-        newy.append(np.full(no_combinations, u))
+        newy.append(np.full(len(Xcomb), u))
 
     return np.concatenate(newX), np.concatenate(newy)
 
 
-def get_combinations(X, n_channels, no_combinations):
+def resample_within_single_channel(X, n_channels, no_combinations):
     """From X.shape[0] choose n_channels, repeated no_combinations times."""
 
-    result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
+    result = np.zeros((no_combinations, n_channels, X.shape[-1]))
     for i in range(no_combinations):
-        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)] 
+        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels), 0]   # index 0 to match shape
     return result
 
+
+def resample_two_channels(X, no_combinations):
+    """From X with two channels, create random combinations"""
+
+    result = np.zeros((no_combinations, 2, X.shape[-1]))
+    for i in range(no_combinations):
+        result[i, 0] = X[np.random.randint(0, X.shape[0]), 0] 
+        result[i, 1] = X[np.random.randint(0, X.shape[0]), 1] 
+    return result
+    
 
 def load_data(dataPath, triggers=True, releases=False):
 
@@ -241,28 +250,17 @@ def load_data(dataPath, triggers=True, releases=False):
     Xraw = []
     yraw = []
 
-    # def appendData(key):
-    #     Xraw.append(data[key])
-    #     yraw.append(np.full(len(data[key]), np.argwhere(users==key.split("_")[0])[0]))
-    #
-    # for key in data:
-    #     _, mode = key.split("_")
-    #
-    #     if triggers and (mode=="triggers"): appendData(key)
-    #     if releases and (mode=="releases"): appendData(key)
-
-    # TODO: Need to find a better way to create Xraw with shape (N, 2, 32) or (N, 1, 32)
-    # Depending on using just triggers or triggers+releases
-
     for u in users:
 
-        if triggers:
-            Xraw.append(data[u+"_triggers"])
-            yraw.append(np.full(len(data[u+"_triggers"]), np.argwhere(users==u)[0]))
+        userX = []
 
+        if triggers:
+            userX.append(data[u+"_triggers"])
         if releases:
-            Xraw.append(data[u+"_releases"])
-            yraw.append(np.full(len(data[u+"_releases"]), np.argwhere(users==u)[0]))
+            userX.append(data[u+"_releases"])
+        
+        Xraw.append(np.stack(userX, axis=1))
+        yraw.append(np.full(len(userX[0]), np.argwhere(users==u)[0]))
 
 
     Xraw = np.concatenate(Xraw)
