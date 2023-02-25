@@ -81,6 +81,7 @@ S.split_data()
 S.norm_X()
 S.setup_tensors()
 S.print_shapes()
+S.plot_data()
 
 #%%
 # for CNN_STANDARD
@@ -92,8 +93,7 @@ models = [CNN_Best(input_ch=1, n_filters=8)]
 S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=256, max_epochs=50)
 
 #%%
-S.plotAcc()
-S.plotLosses()
+S.plot_train()
 S.bestModelAcc()
 
 #%%
@@ -103,14 +103,14 @@ D.norm_X()
 D.resample_channels()
 D.setup_tensors()
 D.print_shapes()
+D.plot_data()
 
 #%%
 models = [CNN_Best(input_ch=3, n_filters=16)]
 D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=5)
 
 #%%
-D.plotAcc()
-D.plotLosses()
+D.plot_train()
 D.bestModelAcc()
 
 
@@ -122,12 +122,12 @@ E.norm_X()
 # E.resample_channels()
 E.setup_tensors()
 E.print_shapes()
+E.plot_data()
 
 #%%
 models = [CNN_Best(input_ch=2, n_filters=16)]
 E.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=100)
 
 #%%
-E.plotAcc()
-E.plotLosses()
+E.plot_train()
 E.bestModelAcc()

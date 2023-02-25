@@ -10,6 +10,7 @@ class SensorSignals:
     def __init__(self, dataPath, triggers=True, releases=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
 
+
     def split_data(self):
         Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
         self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
@@ -35,6 +36,21 @@ class SensorSignals:
         self.Xtest, self.ytest = resample_with_replacement(self.Xtest, self.ytest)
         self.Xval, self.yval = resample_with_replacement(self.Xval, self.yval)
 
+    def plot_data(self):
+        n_users = len(np.unique(self.ytrain))
+        n_ch = self.Xtrain.shape[1]
+        plt.figure(figsize=(n_users*5, n_ch*5))
+        plt.suptitle("Mean and std of signals for users and channels")
+        for i, u in enumerate(np.unique(self.ytrain)):
+            X = self.Xtrain[self.ytrain==u]
+            Xmean = np.mean(X, axis=0, keepdims=True)
+            Xstd = np.std(X, axis=0, keepdims=True)
+            for j, (mean, std) in enumerate(zip(Xmean[0], Xstd[0])):
+                plt.subplot(n_ch, n_users, n_users*j + i+1)
+                plt.title(f"user={i} ch={j}")
+                plt.errorbar(np.arange(len(mean)), mean, std, fmt="b.")
+                plt.xticks([])
+
     def setup_tensors(self):
         # Use GPU if available 
         self.device = torch.device('cuda') if  torch.cuda.is_available() else torch.device('cpu')
@@ -52,7 +68,6 @@ class SensorSignals:
 
         # Create trainset in the correct format for dataloader
         self.trainset = [[x, y] for (x, y) in zip(self.xtr, self.ytr)]
-
 
     def print_shapes(self):
         print("Raw data shape: ", self.Xraw.shape)
@@ -108,15 +123,16 @@ class SensorSignals:
                 # Print and store results
                 if i % 100 == 0:
                     acc = [self.acc_tr(model), self.acc_val(model)] 
-                    print(f"Epoch {epoch+1}, Batch {i+1}: loss={loss.item():5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
-                    self.losses.append(loss.item())
+                    losses = [loss.item(), self.loss_val(model, criterion)]
+                    print(f"Epoch {epoch+1}, Batch {i+1}: loss_tr={losses[0]:5.3f}, loss_val={losses[1]:5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
+                    self.losses.append(losses)
                     self.accuracies.append(acc)
                     self.epochs.append(epoch+1)
 
         print("Training Complete!")
         self.losses = np.array(self.losses)
         self.accuracies = np.array(self.accuracies)
-        return  np.array(self.losses), np.array(self.accuracies)
+        return  self.losses, self.accuracies
 
     def acc(self, model, x, y):
         with torch.no_grad():
@@ -132,7 +148,10 @@ class SensorSignals:
 
     def acc_te(self, model):
         return self.acc(model, self.xte, self.yte)
-    
+
+    def loss_val(self, model, criterion):
+        with torch.no_grad():    # Each time model is called, need to avoid updating the weights
+            return criterion(model(self.xv), self.yv).item()
 
     def train_multiple_models(self, models, learning_rate, weight_decay, batch_size, max_epochs):
 
@@ -158,27 +177,15 @@ class SensorSignals:
             self.models_loss.append(self.losses)
             self.models_acc.append(self.accuracies)
 
-
-    def plotAcc(self):
-        """ Plot validation accuracies to determine best model """
-        plt.figure(figsize=(8, 5))
-        for lab, accs in zip(self.models_label, self.models_acc):
-            plt.plot(self.epochs, accs, label=[lab+", train", lab+", val"])
-        plt.legend()
-        plt.ylabel("Accuracy")
-        plt.xlabel("Epochs")
-
-
-    def plotLosses(self):
-        """ Plot validation accuracies to determine best model """
-        plt.figure(figsize=(8, 5))
-        plt.title("Training Loss")
-        models_loss = np.array(self.models_loss)
-        plt.plot(self.epochs, models_loss.T, label=self.models_label)
-        plt.legend()
-        plt.ylabel("Loss")
-        plt.xlabel("Epochs")
-        
+    def plot_train(self):
+        """ Plot accuracies and losses durin hte training of the model """
+        for models_metric, ylabel in zip([self.models_acc, self.models_loss], ["Accuracy", "Loss"]):
+            plt.figure(figsize=(8, 5))
+            for lab, accs in zip(self.models_label, models_metric):
+                plt.plot(self.epochs, accs, label=[lab+", train", lab+", val"])
+            plt.legend()
+            plt.ylabel(ylabel)
+            plt.xlabel("Epochs")
         
     def bestModelAcc(self):
         """
@@ -191,6 +198,8 @@ class SensorSignals:
         best_acc = self.acc_te(best_model)
         print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
 
+
+# Functions used in the class above 
 
 def resample_with_replacement(X, y):
     """Make samples for a given dataset containing multiple users."""

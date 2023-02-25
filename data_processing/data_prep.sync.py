@@ -1,4 +1,4 @@
-#%%
+# %%
 # Notebook for isolating triggers and releases
 
 # Load data
@@ -10,7 +10,7 @@ width = 32
 fileName = "second_collection"
 data = np.load((fileName+".npz"))
 
-#%%
+# %%
 # Find signal triggers
 def findTrigIdxs(signal):
     """
@@ -54,7 +54,7 @@ def plotSignal(signal, upTo):
     plt.show()
 
 
-#%%
+# %%
 # Look at a few triggers of one of the users
 key = "A"
 signal = data[key]   # Only a few presses 
@@ -67,7 +67,7 @@ print("releases shape: ", releases.shape)
 plotTriggers(triggers) 
 plotTriggers(releases)
 
-#%%
+# %%
 # Compare the mean and std of the signals for all the users involved
 plt.figure(figsize=(13, 7))
 n_users = len(data)
@@ -82,7 +82,7 @@ for i, key in enumerate(data):
         plt.errorbar(np.arange(len(sigAvg)), sigAvg, sigStd, fmt="b.")
         plt.xticks([])
 
-#%%
+# %%
 # Loop to build and save data 
 # Only run if want to update saved file 
 filteredData = {}
