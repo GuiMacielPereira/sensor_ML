@@ -32,7 +32,7 @@ class CNN_Best(nn.Module):
             nn.ReLU(),
         )
         self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(4*k * 4, 256),
+            nn.Linear(4*k * 128, 256),    # Size of image 32 is 4
             nn.ReLU(),
             nn.Linear(256, 3)
         )
@@ -44,35 +44,6 @@ class CNN_Best(nn.Module):
         return x
 
     
-class CNN_5(nn.Module):    
-    def __init__(self):
-        super(CNN_5, self).__init__()
-
-        self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(1, 4, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(4, 4, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(4),
-            nn.ReLU(),
-            nn.Conv1d(4, 8, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(8, 8, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(8),
-            nn.ReLU(),
-            nn.Conv1d(8, 16, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(16, 16, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(16),
-            nn.ReLU(),
-        )
-        self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(16 * 4, 256),
-            nn.ReLU(),
-            nn.Linear(256, 3)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.shape[0], -1)
-        x = self.fc(x)
-        return x
 
 # %%
 dataPath = "./second_collection_triggs_rels_32.npz"
@@ -131,3 +102,56 @@ E.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_siz
 #%%
 E.plot_train()
 E.bestModelAcc()
+
+#%%
+# Longer intervals of time
+import torch.nn as nn
+from core_functions import SensorSignals
+
+class CNN_dense(nn.Module):    
+
+    def __init__(self, input_ch, n_filters):
+        """input_ch is number of channels in initial image, n_filters is first number of filters."""
+        super(CNN_dense, self).__init__()
+
+        k = n_filters
+
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
+            nn.Conv1d(k, k, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(k),
+            nn.ReLU(),
+            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
+            nn.Conv1d(2*k, 2*k, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(2*k),
+            nn.ReLU(),
+            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
+            nn.Conv1d(4*k, 4*k, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(4*k),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(        # Fully connected part, 3 layers
+            nn.Linear(4*k * 128, 256),    # Size of image 32 is 4
+            nn.ReLU(),
+            nn.Linear(256, 3)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc(x)
+        return x
+
+F = SensorSignals("./second_collection_long_data_1024.npz")
+F.split_data()
+F.norm_X()
+F.setup_tensors()
+F.print_shapes()
+
+#%%
+models = [CNN_Best(input_ch=1, n_filters=16)]
+F.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=6*256, max_epochs=10)
+
+#%%
+F.plot_train()
+F.bestModelAcc()

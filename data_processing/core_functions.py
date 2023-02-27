@@ -8,7 +8,12 @@ import matplotlib.pyplot as plt
 class SensorSignals:
 
     def __init__(self, dataPath, triggers=True, releases=False):
-        self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
+
+        length = int(dataPath.split("_")[-1].split(".npz")[0])
+        if length >= 1024:
+            self.Xraw, self.yraw = load_long_data(dataPath)
+        else:
+            self.Xraw, self.yraw = load_short_data(dataPath, triggers, releases)
 
 
     def split_data(self):
@@ -58,8 +63,8 @@ class SensorSignals:
         print("Using Device: ", self.device, ", dtype: ", self.dtype)
 
         def toTensor(X, y):
-            xt = torch.tensor(X, dtype=self.dtype)
-            yt = torch.tensor(y, dtype=torch.long)
+            xt = torch.tensor(X, dtype=self.dtype).to(self.device)
+            yt = torch.tensor(y, dtype=torch.long).to(self.device)
             return xt, yt 
         
         self.xtr, self.ytr = toTensor(self.Xtrain, self.ytrain)
@@ -77,6 +82,7 @@ class SensorSignals:
         print("Shape of train set:", self.Xtrain.shape)
         print("Shape of validation set:", self.Xval.shape)
         print("Fraction of single class in test set: ", np.mean(self.ytest==0))
+        print("dtype of inputs: ", self.xtr.dtype)
 
     def weight_init(self, m):
         """
@@ -138,7 +144,7 @@ class SensorSignals:
         with torch.no_grad():
             out = model(x)
             _, pred = torch.max(out.data, 1)
-            return (pred==y).detach().numpy().mean()
+            return (pred==y).detach().cpu().numpy().mean()
 
     def acc_tr(self, model):
         return self.acc(model, self.xtr, self.ytr)
@@ -247,7 +253,7 @@ def resample_two_channels(X, no_combinations):
     return result
     
 
-def load_data(dataPath, triggers=True, releases=False):
+def load_short_data(dataPath, triggers=True, releases=False):
 
     assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
     data = np.load(dataPath)
@@ -273,6 +279,22 @@ def load_data(dataPath, triggers=True, releases=False):
 
 
     Xraw = np.concatenate(Xraw)
+    yraw = np.concatenate(yraw)
+    return Xraw, yraw
+
+
+def load_long_data(dataPath):
+    data = np.load(dataPath)
+
+    Xraw = []
+    yraw = []
+
+    for i, key in enumerate(data):
+        X = data[key]
+        Xraw.append(X)
+        yraw.append(np.full(len(X), i))
+
+    Xraw = np.concatenate(Xraw)[:, np.newaxis, :]
     yraw = np.concatenate(yraw)
     return Xraw, yraw
 
