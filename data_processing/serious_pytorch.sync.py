@@ -142,7 +142,7 @@ class CNN_dense(nn.Module):
         x = self.fc(x)
         return x
 
-F = SensorSignals("./second_collection_long_data_1024.npz")
+F = SensorSignals("./second_collection_zeros_out_long_data_1024.npz")
 F.split_data()
 F.norm_X()
 F.setup_tensors()

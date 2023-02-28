@@ -4,12 +4,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-fileName = "second_collection"
-data = np.load((fileName+".npz"))
+filename = "second_collection"
+data = np.load((filename+".npz"))
+
+filterZerosOut = True
 
 f_data = {}
 for key in data:
     sig = data[key]
+
+    if filterZerosOut:
+        sig = sig[sig>=0.01]
+
     print("User: ", key)
     print("Total number of points: ", len(sig))
     idxs = np.arange(0, len(sig), step=100)   # Discard the last index so lengths match
@@ -31,15 +37,20 @@ key = "A"
 n_samp = 10
 plt.figure()
 r_idxs = np.random.randint(0, len(f_data[key]), size=n_samp)
-for i, idx in enumerate(r_idxs):
-    s = f_data[key][idx]
-    plt.subplot(n_samp, 1, i+1)
-    plt.plot(np.arange(s.size), s, "b.")
+f_idxs = np.arange(0, n_samp)
+for title, idxs in zip([f"First {n_samp} collections", f"Random {n_samp} collections"], [f_idxs, r_idxs]):
+    plt.figure(figsize=(8, 6))
+    for i, idx in enumerate(idxs):
+        s = f_data[key][idx]
+        plt.subplot(n_samp, 1, i+1)
+        plt.plot(np.arange(s.size), s, "b.")
+    plt.suptitle(title)
 plt.show()
 
 #%%
 # Save data to file 
-output = fileName + "_long_data" + f"_{s.size}.npz"
+outname = filename if not(filterZerosOut) else filename+"_zeros_out"
+output = outname + "_long_data" + f"_{s.size}.npz"
 np.savez(output, **f_data )
 print("Saved data!")
 
