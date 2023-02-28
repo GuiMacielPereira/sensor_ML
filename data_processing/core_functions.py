@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 
 class SensorSignals:
 
-    def __init__(self, dataPath, triggers=True, releases=False):
+    def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
 
         length = int(dataPath.split("_")[-1].split(".npz")[0])
         if length >= 1024:
             self.Xraw, self.yraw = load_long_data(dataPath)
         else:
-            self.Xraw, self.yraw = load_short_data(dataPath, triggers, releases)
+            self.Xraw, self.yraw = load_short_data(dataPath, triggers, releases, transforms)
 
 
     def split_data(self):
@@ -253,7 +253,7 @@ def resample_two_channels(X, no_combinations):
     return result
     
 
-def load_short_data(dataPath, triggers=True, releases=False):
+def load_short_data(dataPath, triggers=True, releases=False, transforms=False):
 
     assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
     data = np.load(dataPath)
@@ -271,8 +271,16 @@ def load_short_data(dataPath, triggers=True, releases=False):
 
         if triggers:
             userX.append(data[u+"_triggers"])
+            if transforms:
+                Xt = np.diff(data[u+"_triggers"], axis=-1)
+                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))   # Add zeros to end of each signal to match shape
+                # Xt = np.diff(data[u+"_triggers"], n=2, axis=-1)
+                # userX.append(np.pad(Xt, pad_width=((0, 0), (1, 1))))
         if releases:
             userX.append(data[u+"_releases"])
+            if transforms:
+                Xt = np.diff(data[u+"_releases"], axis=-1)
+                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))
         
         Xraw.append(np.stack(userX, axis=1))
         yraw.append(np.full(len(userX[0]), np.argwhere(users==u)[0]))

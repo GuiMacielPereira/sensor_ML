@@ -8,42 +8,8 @@
 # BatchNorm helps the training initialy
 
 # %%
-import torch.nn as nn
 from core_functions import SensorSignals
-
-# Model with usual halving of image size and doubling the depth
-class CNN_Best(nn.Module):    
-
-    def __init__(self, input_ch, n_filters):
-        """input_ch is number of channels in initial image, n_filters is first number of filters."""
-        super(CNN_Best, self).__init__()
-
-        k = n_filters
-
-        self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(k),
-            nn.ReLU(),
-            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(2*k),
-            nn.ReLU(),
-            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(4*k),
-            nn.ReLU(),
-        )
-        self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(4*k * 128, 256),    # Size of image 32 is 4
-            nn.ReLU(),
-            nn.Linear(256, 3)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.shape[0], -1)
-        x = self.fc(x)
-        return x
-
-    
+from networks import CNN_Simple, CNN_Dense
 
 # %%
 dataPath = "./second_collection_triggs_rels_32.npz"
@@ -60,7 +26,7 @@ S.plot_data()
 # with BatchNorm1d
 # lr=1e-2, wd=1e-3
 
-models = [CNN_Best(input_ch=1, n_filters=8)]
+models = [CNN_Simple(input_ch=1, n_filters=8)]
 S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=256, max_epochs=50)
 
 #%%
@@ -77,7 +43,7 @@ D.print_shapes()
 D.plot_data()
 
 #%%
-models = [CNN_Best(input_ch=3, n_filters=16)]
+models = [CNN_Simple(input_ch=3, n_filters=16)]
 D.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=128, max_epochs=5)
 
 #%%
@@ -86,17 +52,18 @@ D.bestModelAcc()
 
 
 #%%
+from core_functions import SensorSignals
+from networks import CNN_Simple, CNN_Dense
 # Look into using triggers and releases in two separate channels
-E = SensorSignals("./second_collection_triggs_rels_32.npz", triggers=True, releases=True) 
+E = SensorSignals("./second_collection_triggs_rels_32.npz", triggers=True, releases=False, transforms=True) 
 E.split_data()
 E.norm_X()
-# E.resample_channels()
 E.setup_tensors()
 E.print_shapes()
 E.plot_data()
 
 #%%
-models = [CNN_Best(input_ch=2, n_filters=16)]
+models = [CNN_Simple(input_ch=2, n_filters=16)]
 E.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=100)
 
 #%%
@@ -105,42 +72,8 @@ E.bestModelAcc()
 
 #%%
 # Longer intervals of time
-import torch.nn as nn
 from core_functions import SensorSignals
-
-class CNN_dense(nn.Module):    
-
-    def __init__(self, input_ch, n_filters):
-        """input_ch is number of channels in initial image, n_filters is first number of filters."""
-        super(CNN_dense, self).__init__()
-
-        k = n_filters
-
-        self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(k, k, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(k),
-            nn.ReLU(),
-            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(2*k, 2*k, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(2*k),
-            nn.ReLU(),
-            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
-            nn.Conv1d(4*k, 4*k, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(4*k),
-            nn.ReLU(),
-        )
-        self.fc = nn.Sequential(        # Fully connected part, 3 layers
-            nn.Linear(4*k * 128, 256),    # Size of image 32 is 4
-            nn.ReLU(),
-            nn.Linear(256, 3)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.shape[0], -1)
-        x = self.fc(x)
-        return x
+from networks import CNN_Simple, CNN_Dense
 
 F = SensorSignals("./second_collection_zeros_out_long_data_1024.npz")
 F.split_data()
@@ -149,7 +82,7 @@ F.setup_tensors()
 F.print_shapes()
 
 #%%
-models = [CNN_Best(input_ch=1, n_filters=16)]
+models = [CNN_Simple(input_ch=1, n_filters=16)]
 F.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=6*256, max_epochs=10)
 
 #%%
