@@ -63,7 +63,7 @@ E.print_shapes()
 E.plot_data()
 
 #%%
-models = [CNN_Simple(input_ch=2, n_filters=16)]
+models = [CNN_Simple(input_ch=2, n_filters=16, im_size=64)]
 E.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=100)
 
 #%%
@@ -73,17 +73,17 @@ E.bestModelAcc()
 #%%
 # Longer intervals of time
 from core_functions import SensorSignals
-from networks import CNN_Simple, CNN_Dense
+from networks import CNN_Simple, CNN_Dense, CNN_64
 
-F = SensorSignals("./second_collection_zeros_out_long_data_1024.npz")
+F = SensorSignals("./second_collection_triggs_rels_64.npz")
 F.split_data()
 F.norm_X()
 F.setup_tensors()
 F.print_shapes()
 
 #%%
-models = [CNN_Simple(input_ch=1, n_filters=16)]
-F.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=6*256, max_epochs=10)
+models = [CNN_64(input_ch=1, n_filters=8)]
+F.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=256, max_epochs=100)
 
 #%%
 F.plot_train()

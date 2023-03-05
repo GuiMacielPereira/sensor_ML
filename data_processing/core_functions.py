@@ -185,13 +185,13 @@ class SensorSignals:
 
     def plot_train(self):
         """ Plot accuracies and losses durin hte training of the model """
+        plt.figure(figsize=(8, 5))
         for models_metric, ylabel in zip([self.models_acc, self.models_loss], ["Accuracy", "Loss"]):
-            plt.figure(figsize=(8, 5))
             for lab, accs in zip(self.models_label, models_metric):
-                plt.plot(self.epochs, accs, label=[lab+", train", lab+", val"])
-            plt.legend()
-            plt.ylabel(ylabel)
-            plt.xlabel("Epochs")
+                plt.plot(self.epochs, accs, label=[lab+", Train "+ylabel, lab+", Val "+ylabel])
+        plt.legend()
+        plt.xlabel("Epochs")
+        plt.ylim(0, 1)
         
     def bestModelAcc(self):
         """

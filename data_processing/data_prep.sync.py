@@ -34,19 +34,18 @@ def separateIntoTriggers(signal, trigIdx, releaseIdx, width=width):
         upSig = signal[i:i+width]
         downSig = signal[j-width:j]
 
-        if np.any(upSig>=2):          # Hardcoded threshold to select only clean signals
-
-            if np.any(upSig[-10:]<=0.5):    # Check that this length doe not include release
+        if np.mean(upSig<=0.5)>=0.8:          # Hardcoded threshold to select only clean signals
+            false_trigs.append(upSig)
+        else:
+            if np.any(upSig[-10:]<=1.5):    # Check that this length doe not include release
                 short_trigs.append(upSig)
             else:
                 # TODO: Need to confirm that approach below is matching up triggers to releases correctly
                 triggers.append(upSig) 
                 releases.append(downSig)
-        else:
-            false_trigs.append(upSig)
 
     print("\nNumber of signals excluded because false noise: ", len(false_trigs))
-    print("\nNumber of signals excluded becasue too short: ", len(short_trigs))
+    print("Number of signals excluded becasue too short: ", len(short_trigs))
 
     return np.array(triggers), np.array(releases), (np.array(false_trigs), np.array(short_trigs))
 
@@ -72,7 +71,7 @@ def plotSignal(signal, upTo):
 key = "J"
 signal = data[key]   # Only a few presses 
 print("Signal shape:", signal.shape)
-plotSignal(signal, upTo=10000)
+# plotSignal(signal, upTo=10000)
 trigIdx, relIdx = findTrigIdxs(signal)
 triggers, releases, faulty = separateIntoTriggers(signal, trigIdx, relIdx)
 
@@ -81,12 +80,12 @@ triggers, releases, faulty = separateIntoTriggers(signal, trigIdx, relIdx)
 # Best to see on a matplotlib plot rather than a jupyter notebook
 false_trigs, short_trigs = faulty
 for f_trig in (false_trigs, short_trigs):
+    if len(f_trig)==0: continue
     false_sig = np.concatenate(f_trig)
     plt.figure()
     plt.plot(np.arange(len(false_sig)), false_sig, "b.")
     plt.show()
 
-exit()
 #%%
 print("triggers shape:", triggers.shape)
 print("releases shape: ", releases.shape)
@@ -113,6 +112,7 @@ for i, key in enumerate(data):
 # Only run if want to update saved file 
 filteredData = {}
 for key in data:
+    print(f"\nUser {key}:")
     signal = data[key].flatten()
     trigIdx, relIdx = findTrigIdxs(signal)
     triggers, releases, _ = separateIntoTriggers(signal, trigIdx, relIdx)
