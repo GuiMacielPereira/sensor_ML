@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Width of triggers 
-width = 64 
+width = 32 
 fileName = "second_collection"
 data = np.load((fileName+".npz"))
 

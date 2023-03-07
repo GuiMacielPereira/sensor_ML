@@ -35,11 +35,27 @@ class SensorSignals:
         norm(self.Xtest)
         norm(self.Xval)
 
-    def resample_channels(self):
+    def resample_random_combinations(self):
+        """Makes random combinations of a single channel"""
+
         np.random.seed(0)
-        self.Xtrain, self.ytrain = resample_with_replacement(self.Xtrain, self.ytrain)
-        self.Xtest, self.ytest = resample_with_replacement(self.Xtest, self.ytest)
-        self.Xval, self.yval = resample_with_replacement(self.Xval, self.yval)
+        def make_combinations(X):
+            return resample_with_replacement(X, n_channels=3, no_combinations=5*len(X))
+
+        self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
+        # Data augmentation should not be performed on test and validation set
+        # Should be resampled_without_replacement
+        self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
+        self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
+
+    def resample_trigs_rels(self):
+        """Assigns triggers to releases randomly."""
+        # Generally not used, no advantage observed from this type of data augmentation
+
+        np.random.seed(0)
+        def make_combinations(X):
+            return resample_trigs_rels(X, no_combinations=5*len(X))
+        self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
 
     def plot_data(self):
         n_users = len(np.unique(self.ytrain))
@@ -206,21 +222,12 @@ class SensorSignals:
 
 
 # Functions used in the class above 
+def resample_by_user(make_combinations, X, y):
+    """
+    Takes in a given procedure for making combinations and 
+    applies it to each individual user
+    """
 
-def resample_with_replacement(X, y):
-    """Make samples for a given dataset containing multiple users."""
-
-    def make_combinations(X):
-        no_combinations = 5*len(X)
-
-        if X.shape[1]==1:
-            return resample_within_single_channel(X, no_combinations=no_combinations, n_channels=3)
-
-        elif X.shape[1]==2:
-            return resample_two_channels(X, no_combinations=no_combinations)
-        else:
-            raise ValueError("Rsampling currently only suported for n_channels equal to 1 or 2.")
-        
     newX = []
     newy = []
     for u in np.unique(y):    # Loop over all users 
@@ -234,17 +241,23 @@ def resample_with_replacement(X, y):
     return np.concatenate(newX), np.concatenate(newy)
 
 
-def resample_within_single_channel(X, n_channels, no_combinations):
+def resample_with_replacement(X, n_channels, no_combinations):
     """From X.shape[0] choose n_channels, repeated no_combinations times."""
 
-    result = np.zeros((no_combinations, n_channels, X.shape[-1]))
+    result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
     for i in range(no_combinations):
-        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels), 0]   # index 0 to match shape
-    return result
+        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)]   # index 0 to match shape
+
+    # Reshape into correct number of channels.
+    # Accounts for case where both triggers and releases are considered.
+    return result.reshape((no_combinations, n_channels*X.shape[1], *X.shape[2:]))
 
 
-def resample_two_channels(X, no_combinations):
-    """From X with two channels, create random combinations"""
+def resample_trigs_rels(X, no_combinations):
+    """
+    From X with two channels, one for trigers and another for releases,
+    create random combinations between triggers and releases. 
+    """
 
     result = np.zeros((no_combinations, 2, X.shape[-1]))
     for i in range(no_combinations):
