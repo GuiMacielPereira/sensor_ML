@@ -7,6 +7,24 @@
 # More convolution layers did not increase accuracy
 # BatchNorm helps the training initialy
 
+#%%
+from core_functions import Data, Trainer, plot_train
+from networks import CNN_Simple, CNN_Dense
+dataPath = "./second_collection_triggs_rels_32.npz"
+D = Data(dataPath)
+D.split()
+D.normalize()
+D.tensors_to_device()
+D.print_shapes()
+
+#%%
+model = CNN_Simple(input_ch=1, n_filters=8)
+T = Trainer(D)
+T.setup(model)
+T.train_model(model)
+plot_train([T])
+print(f"Test Accuracy of best state model: {D.acc_te(model)*100:.1f}")
+
 # %%
 from core_functions import SensorSignals
 from networks import CNN_Simple, CNN_Dense
