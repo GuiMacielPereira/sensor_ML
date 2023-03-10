@@ -17,8 +17,10 @@ class lstm(nn.Module):
     def __init__(self):
         super(lstm, self).__init__()
         
-        self.input_size = 1 
-        self.hidden_dim = 100
+        torch.manual_seed(180200742)    # Set seed for same initialization of weigths each time
+
+        self.input_size = 4 
+        self.hidden_dim = 64 
         self.out_size = 5
         self.num_layers = 1
 
@@ -30,7 +32,7 @@ class lstm(nn.Module):
         
     def forward(self, x):
         batch_size = x.size(0)
-        x = x.reshape((x.shape[0], x.shape[2], 1))
+        x = x.reshape((x.shape[0], int(x.shape[2]/self.input_size), self.input_size))
 
         # # Initialize hidden state
         # h_0 = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_dim)) #hidden state
@@ -53,10 +55,15 @@ class lstm(nn.Module):
  
 
 models = [lstm()]
-S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=256, max_epochs=10)
+S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200)
 
 #%%
 S.plot_train()
 S.bestModelAcc()
 
 
+#%%
+import numpy as np
+
+A = np.arange(32).reshape((8,4))
+print(A)

@@ -118,6 +118,7 @@ class SensorSignals:
         self.losses = []        # Track loss function
         self.accuracies = []    # Track train, validation and test accuracies
         self.epochs = []        # To track progress over epochs
+        val_loss_min = np.inf
 
         # Build data loader to seperate data into batches
         train_loader = DataLoader(self.trainset, batch_size=batch_size, shuffle=True)
@@ -144,12 +145,17 @@ class SensorSignals:
                 
                 # Print and store results
                 if i % 100 == 0:
+                    model.eval()   # Disables some layers such as drop-out and batchnorm
                     acc = [self.acc_tr(model), self.acc_val(model)] 
-                    losses = [loss.item(), self.loss_val(model, criterion)]
+                    val_loss = self.loss_val(model, criterion)
+                    losses = [loss.item(), val_loss]
                     print(f"Epoch {epoch+1}, Batch {i+1}: loss_tr={losses[0]:5.3f}, loss_val={losses[1]:5.3f}, train={acc[0]*100:4.1f}%, val={acc[1]*100:4.1f}%")
                     self.losses.append(losses)
                     self.accuracies.append(acc)
                     self.epochs.append(epoch+1)
+
+                    if val_loss < val_loss_min:
+                        self.best_state = model.state_dict() 
 
         print("Training Complete!")
         self.losses = np.array(self.losses)
@@ -191,6 +197,7 @@ class SensorSignals:
         self.models = models
         self.models_loss = [] 
         self.models_acc = [] 
+        self.models_best_states = []
 
         for model, lr, wd  in zip(self.models, learning_rate, weight_decay):
             
@@ -198,6 +205,7 @@ class SensorSignals:
 
             self.models_loss.append(self.losses)
             self.models_acc.append(self.accuracies)
+            self.models_best_states.append(self.best_state)
 
     def plot_train(self):
         """ Plot accuracies and losses durin hte training of the model """
@@ -215,10 +223,18 @@ class SensorSignals:
         Chooses model that yields the best validation accuracy
         S is object containing the data used during training 
         """
-        best_acc_idx = np.argmax([acc[-1, -1] for acc in self.models_acc])
-        best_model = self.models[best_acc_idx]
-        best_acc = self.acc_te(best_model)
-        print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
+        for m, state in zip(self.models, self.models_best_states):
+            m.load_state_dict(state)
+
+        best_accs = [self.acc_te(model) for model in self.models]
+        # best_loss = [self.loss_val(model) for model in self.models]
+        for model, acc in zip(self.models, best_accs):
+            print(f"Test accuracy of lowest val acc={self.acc_val(model)*100:.1f}: {acc*100:.1f}%")
+
+        # best_acc_idx = np.argmax([acc[-1, -1] for acc in self.models_acc])
+        # best_model = self.models[best_acc_idx]
+        # best_acc = self.acc_te(best_model)
+        # print(f"Accuracy of test set of best model (idx={best_acc_idx}): {best_acc*100:.1f}%")
 
 
 # Functions used in the class above 
