@@ -4,13 +4,13 @@
 import torch.nn as nn
 from torch.autograd import Variable 
 import torch
-from core_functions import SensorSignals
+from core_functions import Data, Trainer, plot_train, test_accuracy
 dataPath = "./second_collection_triggs_rels_32.npz"
-S = SensorSignals(dataPath)  
-S.split_data()
-S.norm_X()
-S.setup_tensors()
-S.print_shapes()
+D = Data(dataPath, triggers=True, releases=False)
+D.split()
+D.normalize()
+D.tensors_to_device()
+D.print_shapes()
 
 #%%
 class lstm(nn.Module):
@@ -54,13 +54,12 @@ class lstm(nn.Module):
         return out 
  
 
-models = [lstm()]
-S.train_multiple_models(models, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200)
-
-#%%
-S.plot_train()
-S.bestModelAcc()
-
+model = lstm() 
+T = Trainer(D)
+T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200)
+T.train_model(model)
+plot_train([T])
+test_accuracy(D, [model])
 
 #%%
 import numpy as np
