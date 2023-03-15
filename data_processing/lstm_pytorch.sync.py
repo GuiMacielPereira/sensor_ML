@@ -64,5 +64,24 @@ test_accuracy(D, [model])
 #%%
 import numpy as np
 
-A = np.arange(32).reshape((8,4))
+A = np.arange(32)
+idxs = np.arange(len(A), step=2)
 print(A)
+print(idxs)
+
+L = 15
+M = np.zeros((L, 4)) 
+for i, idx in enumerate(idxs[:-1]):
+    M[i] = A[idx:idx+4]
+print(M)
+
+# Make a mask to select positions
+mask = np.full((L, 32), False)
+mask[0, :4] = True
+for i in range(1, len(mask)):
+    mask[i] = np.roll(mask[i-1], shift=2)
+print(mask)
+
+A = A[np.newaxis, :] * np.ones((15, 1))
+print(A[mask].reshape((15, 4)))
+
