@@ -9,17 +9,44 @@ dataPath = "./second_collection_triggs_rels_32.npz"
 D = Data(dataPath, triggers=True, releases=False)
 D.split()
 D.normalize()
+
+import numpy as np
+def change_input(x):
+    # Make a mask used to transform inputs 
+    bs = x.shape[0]
+    W = x.shape[-1] 
+    I = 3
+    S = 3
+    L = int((W - I) / S + 1)
+
+    mask = np.full((L, W), False)
+    mask[0, :I] = True 
+    for i in range(1, L):
+        mask[i] = np.roll(mask[i-1], shift=S)
+
+    result = np.zeros((bs, L, I))
+    x = x * np.ones((1, L, 1))  # multiply by ones to extend shape
+    for i in range(bs):
+        result[i] = x[i][mask].reshape((L, I))
+    return result
+
+D.Xtrain = change_input(D.Xtrain) 
+D.Xtest = change_input(D.Xtest) 
+D.Xval = change_input(D.Xval) 
+    
 D.tensors_to_device()
 D.print_shapes()
 
 #%%
+import numpy as np
+
 class lstm(nn.Module):
     def __init__(self):
         super(lstm, self).__init__()
         
         torch.manual_seed(180200742)    # Set seed for same initialization of weigths each time
 
-        self.input_size = 4 
+        self.input_size = 3 
         self.hidden_dim = 64 
         self.out_size = 5
         self.num_layers = 1
@@ -31,18 +58,12 @@ class lstm(nn.Module):
         self.relu = nn.ReLU()
         
     def forward(self, x):
-        batch_size = x.size(0)
-        x = x.reshape((x.shape[0], int(x.shape[2]/self.input_size), self.input_size))
+        # # This reshaping works for accurary ~ 87%
+        batch_size = x.shape[0]
+        # x = x.reshape((x.shape[0], int(x.shape[2]/self.input_size), self.input_size))
 
-        # # Initialize hidden state
-        # h_0 = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_dim)) #hidden state
-        # c_0 = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_dim)) #internal state
 
-        # Propagate input through LSTM
-        # print("input: ", x.shape)
         lstm_out, _ = self.lstm(x) #lstm with input, hidden, and internal state
-        # print("out lstm: ", lstm_out.shape)
-
         lstm_out = lstm_out[:, -1, :]    # Choose final output of lstm for classification
 
         lstm_out = lstm_out.contiguous().view(-1, self.hidden_dim)
@@ -76,12 +97,18 @@ for i, idx in enumerate(idxs[:-1]):
 print(M)
 
 # Make a mask to select positions
-mask = np.full((L, 32), False)
-mask[0, :4] = True
+W = 32
+I = 4
+S = 2
+L = (W - I) / S + 1
+
+
+mask = np.full((L, W), False)
+mask[0, :I] = True
 for i in range(1, len(mask)):
-    mask[i] = np.roll(mask[i-1], shift=2)
+    mask[i] = np.roll(mask[i-1], shift=S)
 print(mask)
 
-A = A[np.newaxis, :] * np.ones((15, 1))
-print(A[mask].reshape((15, 4)))
+A = A[np.newaxis, :] * np.ones((L, 1))
+print(A[mask].reshape((L, I)))
 
