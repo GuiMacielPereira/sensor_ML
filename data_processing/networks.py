@@ -37,7 +37,7 @@ class CNN_Simple(nn.Module):
 # Same network as above, but with extra convolutional layers
 class CNN_Dense(nn.Module):    
 
-    def __init__(self, input_ch, n_filters, im_size=32):
+    def __init__(self, input_ch, n_filters, im_size=32, out_size=3):
         """input_ch is number of channels in initial image, n_filters is first number of filters."""
         super(CNN_Dense, self).__init__()
 
@@ -60,7 +60,7 @@ class CNN_Dense(nn.Module):
         self.fc = nn.Sequential(        # Fully connected part, 3 layers
             nn.Linear(4*k * int(im_size/8), 256),    # Size of image 32 is 4
             nn.ReLU(),
-            nn.Linear(256, 3)
+            nn.Linear(256, out_size)
         )
 
     def forward(self, x):

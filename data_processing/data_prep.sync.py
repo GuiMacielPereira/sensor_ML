@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 # Width of triggers 
 width = 32 
-fileName = "second_collection"
-data = np.load((fileName+".npz"))
+path = "five_people/five_people.npz"
+data = np.load((path))
 
 # %%
 # Find signal triggers
@@ -68,7 +68,7 @@ def plotSignal(signal, upTo):
 
 # %%
 # Look at a few triggers of one of the users
-key = "J"
+key = "U1"
 signal = data[key]   # Only a few presses 
 print("Signal shape:", signal.shape)
 # plotSignal(signal, upTo=10000)
@@ -121,7 +121,8 @@ for key in data:
     print(f"saving {key}_triggers: ", triggers.shape)
     print(f"saving {key}_releases: ", releases.shape)
 
-output = fileName + "_triggs_rels" + f"_{triggers.shape[1]}.npz"
+filename = path.split(".")[0].split("/")[-1]
+output = filename + "_triggs_rels" + f"_{triggers.shape[1]}.npz"
 np.savez(output, **filteredData)
 
 
