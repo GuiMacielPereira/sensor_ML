@@ -33,12 +33,12 @@ class Data:
             print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
 
-    def resample_random_combinations(self):
+    def resample_random_combinations(self, aug_factor=5):
         """Makes random combinations of a single channel"""
 
         np.random.seed(0)
         def make_combinations(X):
-            return resample_with_replacement(X, n_channels=3, no_combinations=5*len(X))
+            return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
 
         self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
         # Data augmentation should not be performed on test and validation set
