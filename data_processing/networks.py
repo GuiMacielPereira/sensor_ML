@@ -70,6 +70,58 @@ class CNN_Dense(nn.Module):
         return x
 
 
+# Define simplest lstm model
+from torch import manual_seed
+class lstm(nn.Module):
+    def __init__(self, input_size, hidden_size, out_size):
+        super(lstm, self).__init__()
+        manual_seed(180200742)    # Set seed for same initialization of weigths each time
+        # shape of input (batch_size, n_sequence, input_size)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=1, batch_first=True, bidirectional=False)
+        self.fc = nn.Linear(hidden_size, out_size)
+        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        
+    def forward(self, x):
+        x, _ = self.lstm(x) 
+        x = x[:, -1, :]    # Choose only output of last lstm cell for classification
+        x = self.fc(x)
+        x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        return x 
+
+# Try out a simple CNN + LSTM model
+class cnn_lstm(nn.Module):
+    def __init__(self, input_size, hidden_conv, hidden_lstm, out_size):
+        super(cnn_lstm, self).__init__()
+        manual_seed(180200742)    # Set seed for same initialization of weigths each time
+        # shape of input (batch_size, n_sequence, input_size)
+        ks = 3   # kernel_size
+        s = 2    # stride
+        n_features = 8 
+
+        self.conv = nn.Sequential(
+                nn.Conv1d(1, out_channels=hidden_conv, kernel_size=ks, stride=s),
+                nn.ReLU(),
+                nn.Flatten(),
+                nn.Linear(hidden_conv*int((input_size-ks)/2 + 1), n_features)
+                )
+
+        self.lstm = nn.LSTM(input_size=n_features, hidden_size=hidden_lstm, num_layers=1, batch_first=True, bidirectional=False)
+        self.fc = nn.Linear(hidden_lstm, out_size)
+        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        
+    def forward(self, x):
+        bs, n_seq, input_size = x.shape
+        x = x.view(bs*n_seq, 1, input_size)
+        x = self.conv(x)
+        x = x.view(bs, n_seq, -1)
+
+        x, _ = self.lstm(x) 
+        x = x[:, -1, :]    # Choose only output of last lstm cell for classification
+        x = self.fc(x)
+        x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        return x 
+
+# Not used in a long time, only for triggers with size 64
 class CNN_64(nn.Module):    
 
     def __init__(self, input_ch, n_filters, im_size=64, out_size=3):

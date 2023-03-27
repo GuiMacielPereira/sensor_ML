@@ -18,7 +18,7 @@ for key in data:
 
     print("User: ", key)
     print("Total number of points: ", len(sig))
-    idxs = np.arange(0, len(sig), step=100)   # Discard the last index so lengths match
+    idxs = np.arange(0, len(sig), step=1024)   # Discard the last index so lengths match
 
     X = []
     for i in idxs:
@@ -52,6 +52,6 @@ plt.show()
 outname = filename if not(filterZerosOut) else filename+"_zeros_out"
 output = outname + "_long_data" + f"_{s.size}.npz"
 np.savez(output, **f_data )
-print("Saved data!")
+print(f"Saved data as {output}")
 
 

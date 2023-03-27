@@ -33,6 +33,16 @@ class Data:
             print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
 
+    def reshape_for_lstm(self, input_size):
+        
+        def reshape(x):
+            if x.shape[-1] % input_size: raise ValueError("Splitting size not matching!")
+            return x.reshape((x.shape[0], -1, input_size))
+
+        self.Xtrain = reshape(self.Xtrain) 
+        self.Xtest = reshape(self.Xtest) 
+        self.Xval = reshape(self.Xval) 
+
     def resample_random_combinations(self, aug_factor=5):
         """Makes random combinations of a single channel"""
 
@@ -41,7 +51,7 @@ class Data:
             return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
 
         self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
-        # Data augmentation should not be performed on test and validation set
+        # TODO: Data augmentation should not be performed on test and validation set
         # Should be resampled_without_replacement
         self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
         self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
@@ -130,7 +140,8 @@ class Trainer:
         """Links traininer to a given dataset"""
         self.Data = D
     
-    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20):
+    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True):
+        
         """Setup of hyperparameters used during training."""
 
         self.max_epochs = max_epochs
@@ -148,6 +159,7 @@ class Trainer:
         self.epochs = []        # To track progress over epochs
 
         self.val_loss_min = np.inf   # Used to store minimul val loss during training
+        self.verbose = verbose
 
     def train_model(self, model):
         """
@@ -207,13 +219,14 @@ class Trainer:
         self.accuracies.append([tr_acc, val_acc])
         self.epochs.append(epoch)
 
-        print(
-            f"End of epoch {epoch}:" \
-            f"loss_tr={tr_loss:5.3f}, " \
-            f"loss_val={val_loss:5.3f}, " \
-            f"train={tr_acc*100:4.1f}%, " \
-            f"val={val_acc*100:4.1f}%"
-            )
+        if self.verbose:
+            print(
+                f"End of epoch {epoch}:" \
+                f"loss_tr={tr_loss:5.3f}, " \
+                f"loss_val={val_loss:5.3f}, " \
+                f"train={tr_acc*100:4.1f}%, " \
+                f"val={val_acc*100:4.1f}%"
+                )
 
         # Store state of minimum validation loss
         if val_loss < self.val_loss_min:
@@ -231,20 +244,22 @@ def weight_init(m):
         torch.nn.init.zeros_(m.bias)
 
 
-def plot_train(trainers):
+def plot_train(trainers, plot_loss=True, plot_acc=True):
     """ Plot accuracies and losses during training of the model """
     plt.figure(figsize=(8, 5))
     for i, T in enumerate(trainers):
         for data, lab in zip([T.accuracies, T.losses], ["Accuracy", "Loss"]):
+            if (lab=="Accuracy") & ~plot_acc: continue
+            if (lab=="Loss") & ~plot_loss: continue
             plt.plot(T.epochs, data, label=[f"model {i}, Train "+lab, f"model {i}, Val "+lab])
     plt.legend()
     plt.xlabel("Epochs")
     plt.ylim(0, 1)
     
 
-def test_accuracy(D:Data, models):
+def test_accuracy(data_objects, models):
     print("Test Accuracy:")
-    for i, model in enumerate(models):
+    for i, (D, model) in enumerate(zip(data_objects, models)):
         print(f"Model {i}: {D.acc_te(model)*100:.1f}%")
 
 
