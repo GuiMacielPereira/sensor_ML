@@ -121,6 +121,40 @@ class cnn_lstm(nn.Module):
         x = self.relu(x)  # x.shape = (batch_size, n_classes)
         return x 
 
+# Try out a simple CNN + LSTM model
+class cnn_lstm_simpler(nn.Module):
+    def __init__(self, n_ch, hidden_lstm, out_size):
+        super(cnn_lstm_simpler, self).__init__()
+        manual_seed(180200742)    # Set seed for same initialization of weigths each time
+
+        # Same CNN as before
+        k = n_ch
+        self.conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(1, k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(k),
+            nn.ReLU(),
+            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(2*k),
+            nn.ReLU(),
+            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(4*k),
+            nn.ReLU(),
+        )
+        # Extra LSTM layer
+        self.lstm = nn.LSTM(input_size=4*k, hidden_size=hidden_lstm, num_layers=1, batch_first=True, bidirectional=False)
+        self.fc = nn.Linear(hidden_lstm, out_size)
+        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        
+    def forward(self, x):
+        x = self.conv(x)
+        # Input size of lstm is the same as number of channels
+        x = x.transpose(2, 1)    # Transpose between second and third axes
+        x, _ = self.lstm(x) 
+        x = x[:, -1, :]    # Choose only output of last lstm cell for classification
+        x = self.fc(x)
+        x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        return x 
+
 # Not used in a long time, only for triggers with size 64
 class CNN_64(nn.Module):    
 

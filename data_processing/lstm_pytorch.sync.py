@@ -79,6 +79,28 @@ plot_train([T])
 test_accuracy([D], [model])
 
 #%%
+# Look at simpler cnn_lstm 
+import torch.nn as nn
+from torch.autograd import Variable 
+import torch
+from core_functions import Data, Trainer, plot_train, test_accuracy
+from networks import cnn_lstm_simpler
+dataPath = "./second_collection_triggs_rels_32.npz"
+D = Data(dataPath, triggers=True, releases=False)
+D.split()
+D.normalize()
+D.tensors_to_device()
+D.print_shapes()
+#%%
+model = cnn_lstm_simpler(n_ch=2, hidden_lstm=8, out_size=3) 
+T = Trainer(D)
+T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True)
+T.train_model(model)
+
+plot_train([T])
+test_accuracy([D], [model])
+
+#%%
 # This function can be used to look at a sliding window 
 # Not better performing than just using a split (i.e. no stride==input_size)
 def change_input(x, I, S):
@@ -99,3 +121,13 @@ def change_input(x, I, S):
     for i in range(bs):
         result[i] = x[i][mask].reshape((L, I))
     return result
+
+
+#%%
+# Exploring some reshaping
+
+import torch 
+x = torch.arange(30).reshape((5, 3, 2))
+print(x)
+x = x.transpose(2, 1)
+print("Reshaped:\n", x)
