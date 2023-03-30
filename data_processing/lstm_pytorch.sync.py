@@ -50,10 +50,77 @@ test_accuracy([D], [model])
 # Look at longer intervals 
 # Prepare data for lstm
 import numpy as np
-filename = "second_collection"
-data = np.load((filename+".npz"))
+filename = "second_collection.npz"
 
 # TODO: Split into train, val, test and do a sliding window on train as data augmentation
+def prepare_lstm_long_data(dataPath):
+    data = np.load(dataPath)
+
+    Xtr, ytr = [], []
+    Xte, yte = [], []
+    Xval, yval = [], []
+
+    for i, key in enumerate(data):
+        udata = data[key]
+        
+        uXtr = sliding_window(udata[ : int(0.7*len(udata))], stride=1024)
+        uXte = sliding_window(udata[int(0.7*len(udata)) : int(0.85*len(udata))])
+        uXval = sliding_window(udata[int(0.85*len(udata)) : ])
+
+        Xtr.append(uXtr)
+        ytr.append(np.full(len(uXtr), i))
+        Xte.append(uXte)
+        yte.append(np.full(len(uXte), i))
+        Xval.append(uXval)
+        yval.append(np.full(len(uXval), i))
+
+    Xtr = np.concatenate(Xtr)[:, np.newaxis, :]
+    ytr = np.concatenate(ytr)
+    Xte = np.concatenate(Xte)[:, np.newaxis, :]
+    yte = np.concatenate(yte)
+    Xval = np.concatenate(Xval)[:, np.newaxis, :]
+    yval = np.concatenate(yval)
+    return Xtr, ytr, Xte, yte, Xval, yval 
+
+def sliding_window(sig, stride=1024, length=1024, filterZerosOut=True):
+    if filterZerosOut:
+        sig = sig[sig>=0.01]
+
+    idxs = np.arange(0, len(sig), step=stride)   # Discard the last index so lengths match
+
+    X = []
+    for i in idxs:
+        cut = sig[i : i+length]
+        if len(cut)==length:
+            if np.any(cut>=2):
+                # if np.sum(np.diff(np.argwhere(sig<=0.05)[:, 0])>1) >= 2:
+                X.append(cut)
+
+    return np.vstack(X)
+
+# Xtr, ytr, Xte, yte, Xval, yval = prepare_lstm_long_data(filename) 
+datasets = prepare_lstm_long_data(filename)
+for d in datasets:
+    print(d.shape)
+
+import matplotlib.pyplot as plt
+data = datasets[0]
+n_samp = 10
+plt.figure()
+r_idxs = np.random.randint(0, len(data), size=n_samp)
+f_idxs = np.arange(0, n_samp)
+for title, idxs in zip([f"First {n_samp} collections", f"Random {n_samp} collections"], [f_idxs, r_idxs]):
+    plt.figure(figsize=(8, 6))
+    for i, idx in enumerate(idxs):
+        s = data[idx][0]
+        plt.subplot(n_samp, 1, i+1)
+        plt.plot(np.arange(s.size), s, "b.")
+    plt.suptitle(title)
+plt.show()
+
+# TODO: Need to try an LSTM layer with a batch_size=1 and each LSTM cell is a sliding window
+# In this case, use MSELoss to tweak the output of each lstm cell 
+# Then can also introduce shitfitng of training data set as data aug.
 
 #%%
 # Look at 3 triggers
