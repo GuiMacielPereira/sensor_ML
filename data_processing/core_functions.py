@@ -88,7 +88,8 @@ class Data:
 
         def to_tensor(X, y):
             xt = torch.tensor(X, dtype=self.dtype).to(self.device)
-            yt = torch.tensor(y, dtype=torch.long).to(self.device)
+            yt = torch.tensor(y, dtype=torch.long).to(self.device)    # Use for CrossEntropyLoss
+            # yt = torch.tensor(y, dtype=self.dtype).to(self.device)    # Use for MSELoss (LSTM)   
             return xt, yt 
         
         self.xtr, self.ytr = to_tensor(self.Xtrain, self.ytrain)
@@ -140,7 +141,7 @@ class Trainer:
         """Links traininer to a given dataset"""
         self.Data = D
     
-    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True):
+    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True, criterion=torch.nn.CrossEntropyLoss()):
         
         """Setup of hyperparameters used during training."""
 
@@ -148,8 +149,7 @@ class Trainer:
 
         # Build data loader to seperate data into batches
         self.train_loader = DataLoader(self.Data.trainset, batch_size=batch_size, shuffle=True)
-        # Use same criterion for all models, cross entropy is good for classification problems
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = criterion 
         #Choose the Adam optimiser
         self.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 

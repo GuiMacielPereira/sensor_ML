@@ -88,6 +88,21 @@ class lstm(nn.Module):
         x = self.relu(x)  # x.shape = (batch_size, n_classes)
         return x 
 
+
+class lstm_many_to_many(nn.Module):
+    def __init__(self, input_size):
+        super(lstm_many_to_many, self).__init__()
+        manual_seed(180200742)    # Set seed for same initialization of weigths each time
+        # shape of input (batch_size, n_sequence, input_size)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=1, num_layers=1, batch_first=True, bidirectional=False)
+        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        
+    def forward(self, x):
+        x, _ = self.lstm(x.squeeze()) # out shape (n_seq, 1) 
+        x = self.relu(x.squeeze())  
+        return x
+
+
 # Try out a simple CNN + LSTM model
 class cnn_lstm(nn.Module):
     def __init__(self, input_size, hidden_conv, hidden_lstm, out_size):

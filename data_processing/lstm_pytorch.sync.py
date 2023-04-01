@@ -118,9 +118,29 @@ for title, idxs in zip([f"First {n_samp} collections", f"Random {n_samp} collect
     plt.suptitle(title)
 plt.show()
 
+#%%
 # TODO: Need to try an LSTM layer with a batch_size=1 and each LSTM cell is a sliding window
 # In this case, use MSELoss to tweak the output of each lstm cell 
 # Then can also introduce shitfitng of training data set as data aug.
+import torch.nn as nn
+from torch.autograd import Variable 
+import torch
+from core_functions import Data, Trainer, plot_train, test_accuracy
+from networks import lstm_many_to_many
+dataPath = "./second_collection_triggs_rels_32.npz"
+D = Data(dataPath)
+# Nasty stuff
+D.Xtrain, D.ytrain, D.Xtest, D.ytest, D.Xval, D.yval = prepare_lstm_long_data(filename)
+D.normalize()
+D.tensors_to_device()
+D.print_shapes()
+model = lstm_many_to_many(input_size=1024) 
+T = Trainer(D)
+T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True, criterion=torch.nn.MSELoss())
+T.train_model(model)
+
+plot_train([T])
+test_accuracy([D], [model])
 
 #%%
 # Look at 3 triggers
