@@ -6,16 +6,17 @@ import torch.nn as nn
 from torch.autograd import Variable 
 import torch
 from core_functions import Data, Trainer, plot_train, test_accuracy
-from networks import lstm
+from networks import lstm, lstm_pool
 
+input_size = 4 
 dataPath = "./second_collection_triggs_rels_32.npz"
 D = Data(dataPath, triggers=True, releases=False)
 D.split()
 D.normalize()
-D.reshape_for_lstm(input_size=8)
+D.reshape_for_lstm(input_size=input_size, sliding=True)
 D.tensors_to_device()
 D.print_shapes()
-model = lstm(input_size=8, hidden_size=8, out_size=3) 
+model = lstm(input_size=input_size, hidden_size=16, out_size=3) 
 T = Trainer(D)
 T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True)
 T.train_model(model)
@@ -35,7 +36,7 @@ dataPath = "./second_collection_triggs_rels_32.npz"
 D = Data(dataPath, triggers=True, releases=False)
 D.split()
 D.normalize()
-D.reshape_for_lstm(input_size=8)
+D.reshape_for_lstm(input_size=8, sliding=True)
 D.tensors_to_device()
 D.print_shapes()
 
@@ -53,7 +54,7 @@ import numpy as np
 filename = "second_collection.npz"
 
 # TODO: Split into train, val, test and do a sliding window on train as data augmentation
-def prepare_lstm_long_data(dataPath):
+def prepare_lstm_long_data(dataPath, stride=1024, length=1024):
     data = np.load(dataPath)
 
     Xtr, ytr = [], []
@@ -63,9 +64,9 @@ def prepare_lstm_long_data(dataPath):
     for i, key in enumerate(data):
         udata = data[key]
         
-        uXtr = sliding_window(udata[ : int(0.7*len(udata))], stride=1024)
-        uXte = sliding_window(udata[int(0.7*len(udata)) : int(0.85*len(udata))])
-        uXval = sliding_window(udata[int(0.85*len(udata)) : ])
+        uXtr = sliding_window(udata[ : int(0.7*len(udata))], stride, length)
+        uXte = sliding_window(udata[int(0.7*len(udata)) : int(0.85*len(udata))], stride, length)
+        uXval = sliding_window(udata[int(0.85*len(udata)) : ], stride, length)
 
         Xtr.append(uXtr)
         ytr.append(np.full(len(uXtr), i))
@@ -82,12 +83,11 @@ def prepare_lstm_long_data(dataPath):
     yval = np.concatenate(yval)
     return Xtr, ytr, Xte, yte, Xval, yval 
 
-def sliding_window(sig, stride=1024, length=1024, filterZerosOut=True):
+def sliding_window(sig, stride, length, filterZerosOut=True):
     if filterZerosOut:
         sig = sig[sig>=0.01]
 
     idxs = np.arange(0, len(sig), step=stride)   # Discard the last index so lengths match
-
     X = []
     for i in idxs:
         cut = sig[i : i+length]
@@ -120,23 +120,23 @@ plt.show()
 
 #%%
 # TODO: Need to try an LSTM layer with a batch_size=1 and each LSTM cell is a sliding window
-# In this case, use MSELoss to tweak the output of each lstm cell 
 # Then can also introduce shitfitng of training data set as data aug.
 import torch.nn as nn
 from torch.autograd import Variable 
 import torch
 from core_functions import Data, Trainer, plot_train, test_accuracy
 from networks import lstm_many_to_many
+stride, length = 100, 100
 dataPath = "./second_collection_triggs_rels_32.npz"
-D = Data(dataPath)
+D = Data(dataPath, triggers=True, releases=False)
 # Nasty stuff
-D.Xtrain, D.ytrain, D.Xtest, D.ytest, D.Xval, D.yval = prepare_lstm_long_data(filename)
+D.Xtrain, D.ytrain, D.Xtest, D.ytest, D.Xval, D.yval = prepare_lstm_long_data(filename, stride, length)
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()
-model = lstm_many_to_many(input_size=1024) 
+model = lstm_many_to_many(input_size=length) 
 T = Trainer(D)
-T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True, criterion=torch.nn.MSELoss())
+T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True)
 T.train_model(model)
 
 plot_train([T])
@@ -213,8 +213,15 @@ def change_input(x, I, S):
 #%%
 # Exploring some reshaping
 
-import torch 
-x = torch.arange(30).reshape((5, 3, 2))
+import numpy as np
+x = np.arange(50).reshape((5, 1, 10))
 print(x)
-x = x.transpose(2, 1)
+res = []
+input_size = 5
+for i in range(x.shape[-1] - input_size + 1):
+    res.append(x[:, :, i:i+input_size])
+x = np.concatenate(res, axis=1)
 print("Reshaped:\n", x)
+print(x.shape)
+
+

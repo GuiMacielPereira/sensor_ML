@@ -33,11 +33,17 @@ class Data:
             print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
 
-    def reshape_for_lstm(self, input_size):
+    def reshape_for_lstm(self, input_size, sliding=False):
         
         def reshape(x):
-            if x.shape[-1] % input_size: raise ValueError("Splitting size not matching!")
-            return x.reshape((x.shape[0], -1, input_size))
+            if sliding:
+                res = []
+                for i in range(x.shape[-1] - input_size + 1):
+                    res.append(x[:, :, i:i+input_size])
+                return np.concatenate(res, axis=1)
+            else:
+                if x.shape[-1] % input_size: raise ValueError("Splitting size not matching!")
+                return x.reshape((x.shape[0], -1, input_size))
 
         self.Xtrain = reshape(self.Xtrain) 
         self.Xtest = reshape(self.Xtest) 
@@ -141,7 +147,7 @@ class Trainer:
         """Links traininer to a given dataset"""
         self.Data = D
     
-    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True, criterion=torch.nn.CrossEntropyLoss()):
+    def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True):
         
         """Setup of hyperparameters used during training."""
 
@@ -149,7 +155,8 @@ class Trainer:
 
         # Build data loader to seperate data into batches
         self.train_loader = DataLoader(self.Data.trainset, batch_size=batch_size, shuffle=True)
-        self.criterion = criterion 
+        # Use same criterion for all models
+        self.criterion = torch.nn.CrossEntropyLoss()
         #Choose the Adam optimiser
         self.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
@@ -197,7 +204,6 @@ class Trainer:
         self.accuracies = np.array(self.accuracies)
 
     def evaluate_model(self, epoch, model):
-
         """
         Calculates training and validation accuracy and losss. 
         Stores this information for the epoch given. 

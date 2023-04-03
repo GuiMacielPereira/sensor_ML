@@ -84,22 +84,43 @@ class lstm(nn.Module):
     def forward(self, x):
         x, _ = self.lstm(x) 
         x = x[:, -1, :]    # Choose only output of last lstm cell for classification
+        # Found out that relu() can be skipped in some cases?
+        # x = self.relu(x)  # x.shape = (batch_size, n_classes)
         x = self.fc(x)
+        return x 
+
+
+class lstm_pool(nn.Module):
+    def __init__(self, input_size, hidden_size, out_size):
+        super(lstm_pool, self).__init__()
+        manual_seed(180200742)    # Set seed for same initialization of weigths each time
+        # shape of input (batch_size, n_sequence, input_size)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=1, batch_first=True, bidirectional=False)
+        self.fc = nn.Linear(hidden_size, out_size)
+        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        
+    def forward(self, x):   # input (n_batch, n_seq, n_features)
+        x, _ = self.lstm(x) 
+        x = x.max(dim=1)[0]    # [0] selects tensor and discards indices
+        # x = x[:, -1, :]    # Choose only output of last lstm cell for classification
         x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        x = self.fc(x)
         return x 
 
 
 class lstm_many_to_many(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, hidden_size=100, out_size=3):
         super(lstm_many_to_many, self).__init__()
         manual_seed(180200742)    # Set seed for same initialization of weigths each time
         # shape of input (batch_size, n_sequence, input_size)
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=1, num_layers=1, batch_first=True, bidirectional=False)
-        self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=out_size, num_layers=1, batch_first=True, bidirectional=False)
+        # self.linear = nn.Linear(hidden_size, out_size)
+        # self.relu = nn.ReLU()    # Interestingly, using Sigmoid prevents learning 
         
     def forward(self, x):
-        x, _ = self.lstm(x.squeeze()) # out shape (n_seq, 1) 
-        x = self.relu(x.squeeze())  
+        x, _ = self.lstm(x.squeeze()) # out shape (n_seq, hidden_size) 
+        # x = self.relu(x)  
+        # x = self.linear(x)
         return x
 
 
@@ -133,7 +154,7 @@ class cnn_lstm(nn.Module):
         x, _ = self.lstm(x) 
         x = x[:, -1, :]    # Choose only output of last lstm cell for classification
         x = self.fc(x)
-        x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        # x = self.relu(x)  # x.shape = (batch_size, n_classes)
         return x 
 
 # Try out a simple CNN + LSTM model
@@ -166,8 +187,9 @@ class cnn_lstm_simpler(nn.Module):
         x = x.transpose(2, 1)    # Transpose between second and third axes
         x, _ = self.lstm(x) 
         x = x[:, -1, :]    # Choose only output of last lstm cell for classification
+        # x = x.max(dim=1)[0]    # Alternative to choosing the last element
         x = self.fc(x)
-        x = self.relu(x)  # x.shape = (batch_size, n_classes)
+        # x = self.relu(x)  # x.shape = (batch_size, n_classes)
         return x 
 
 # Not used in a long time, only for triggers with size 64
