@@ -1,1 +1,5 @@
-activation_functions/
+.ipynb_checkpoints/
+__pycache__/
+data/processed/*1024.npz
+data/raw_npz/five_users_data.npz
+data/processed/five_users*.npz

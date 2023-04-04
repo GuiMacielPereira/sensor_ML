@@ -1,0 +1,5 @@
+setup.py
+peratouch.egg-info/PKG-INFO
+peratouch.egg-info/SOURCES.txt
+peratouch.egg-info/dependency_links.txt
+peratouch.egg-info/top_level.txt
