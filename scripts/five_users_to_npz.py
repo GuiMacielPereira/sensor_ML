@@ -1,5 +1,8 @@
 
 # Script to merge data files
+# In the case of five users, each column in the csv file corresponds to a single sensor
+# The initial order of users: [G, E, LJ, A, J] 
+# The users rotated (equivalent to roll) each subsquent song
 from peratouch.config import data_dir 
 import numpy as np
 import pandas as pd

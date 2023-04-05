@@ -96,3 +96,4 @@ def plot_concat(triggers):
     false_sig = np.concatenate(triggers)
     plt.figure(figsize=(30, 5))
     plt.plot(np.arange(len(false_sig)), false_sig, "b.")
+

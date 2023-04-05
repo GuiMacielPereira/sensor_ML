@@ -10,7 +10,7 @@ from peratouch.data import TriggersAndReleases
 
 # Width of triggers 
 width = 32 
-path = data_dir / "raw_npz" / "three_users_data.npz"
+path = data_dir / "raw_npz" / "five_users_data.npz"
 data = np.load((path))
 
 # %%
