@@ -35,10 +35,11 @@ class Data:
     def reshape_for_lstm(self, input_size, sliding=False):
         
         def reshape(x):
+            x = x.reshape(x.shape[0], x.shape[1] * x.shape[2])     # Concatenate several triggers together, if multiple triggers present
             if sliding:
                 res = []
                 for i in range(x.shape[-1] - input_size + 1):
-                    res.append(x[:, :, i:i+input_size])
+                    res.append(x[:, i:i+input_size])
                 return np.concatenate(res, axis=1)
             else:
                 if x.shape[-1] % input_size: raise ValueError("Splitting size not matching!")
@@ -224,7 +225,7 @@ class Trainer:
         self.accuracies.append([tr_acc, val_acc])
         self.epochs.append(epoch)
 
-        if self.verbose:
+        if (self.verbose) & (epoch%10):
             print(
                 f"End of epoch {epoch}:" \
                 f"loss_tr={tr_loss:5.3f}, " \

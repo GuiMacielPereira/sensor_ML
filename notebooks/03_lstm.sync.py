@@ -12,6 +12,7 @@ D.normalize()
 D.reshape_for_lstm(input_size=input_size, sliding=False)
 D.tensors_to_device()
 D.print_shapes()
+#%%
 model = lstm(input_size=input_size, hidden_size=16, out_size=5, global_pool=True) 
 T = Trainer(D)
 T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=2*256, max_epochs=200, verbose=True)
@@ -26,18 +27,19 @@ from peratouch.core_funcs import Data, Trainer, plot_train, test_accuracy
 from peratouch.networks import lstm
 from peratouch.config import datapath_five_users
 
+input_size = 32
 D = Data(datapath_five_users, triggers=True, releases=False)
 D.split()
 D.normalize()
-D.resample_random_combinations(aug_factor=2)
+D.resample_random_combinations(aug_factor=1)
+D.reshape_for_lstm(input_size=input_size, sliding=False)
 D.tensors_to_device()
 D.print_shapes()
 #%%
-model = lstm(input_size=32, hidden_size=5, out_size=5) 
+model = lstm(input_size=input_size, hidden_size=int(input_size/2), out_size=5, dropout=0.2) 
 T = Trainer(D)
-T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=5000, max_epochs=200, verbose=True)
+T.setup(model, learning_rate=1e-2, weight_decay=1e-3, batch_size=5000, max_epochs=200)
 T.train_model(model)
-
 plot_train([T])
 test_accuracy([D], [model])
 
@@ -68,13 +70,15 @@ def change_input(x, I, S):
 #%%
 # Exploring some reshaping
 import numpy as np
-x = np.arange(50).reshape((5, 1, 10))
+x = np.arange(50).reshape((10, 1, 5))
 print(x)
 res = []
 input_size = 5
-for i in range(x.shape[-1] - input_size + 1):
-    res.append(x[:, :, i:i+input_size])
-x = np.concatenate(res, axis=1)
-print("Reshaped:\n", x)
-print(x.shape)
+x = x.reshape(x.shape[0], x.shape[1] * x.shape[2])
+print(x)
+# for i in range(x.shape[-1] - input_size + 1):
+#     res.append(x[:, :, i:i+input_size])
+# x = np.concatenate(res, axis=1)
+# print("Reshaped:\n", x)
+# print(x.shape)
 
