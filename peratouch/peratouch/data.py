@@ -1,17 +1,41 @@
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
+import sklearn
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 class Data:
     def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases, transforms)
 
-    def split(self):
-        Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
-        self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
+    def group_presses(self, n_elements=3):
 
-    def normalize(self):
+        def group(x):
+            res = []
+            for i in range(len(x) - n_elements):
+                res.append(x[i:i+n_elements, 0, :])
+            return np.array(res)
+
+        self.Xraw, self.yraw = act_on_user(group, self.Xraw, self.yraw)
+
+    # def shuffle(self):   # Shuffle presses randomly
+    #     self.Xraw, self.yraw = sklearn.utils.shuffle(self.Xraw, self.yraw, random_state=42)
+
+    def split(self):
+        self.Xtrain, Xtest, self.ytrain, ytest = train_test_split(self.Xraw, self.yraw, test_size=0.20, random_state=42)
+        self.Xtest, self.Xval, self.ytest, self.yval = train_test_split(Xtest, ytest, test_size=0.50, random_state=42)
+
+    def shuffle_presses_train(self):
+
+        def shuffle(x):
+            batch_size, _, input_size = x.shape
+            x = x.reshape(-1, input_size)
+            x = sklearn.utils.shuffle(x)
+            return x.reshape(batch_size, -1, input_size)
+
+        self.Xtrain, self.ytrain = act_on_user(shuffle, self.Xtrain, self.ytrain)
+
+    def normalize(self, verbose=True):
         """Normalise datasets according to fixed value from train set"""
         # Fix normalisation value
         xmax = np.mean(np.max(self.Xtrain, axis=-1, keepdims=True), axis=0, keepdims=True)     # Hard coding the normalization severely affects validation accuracy
@@ -20,9 +44,10 @@ class Data:
         self.Xtest /= xmax
         self.Xval /= xmax
         
-        print("Train, test and validation data normalized to:")
-        for x in (self.Xtrain, self.Xtest, self.Xval):
-            print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
+        if verbose:
+            print("Train, test and validation data normalized to:")
+            for x in (self.Xtrain, self.Xtest, self.Xval):
+                print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
     def reshape_for_lstm(self, input_size, sliding=False):
         
@@ -41,18 +66,19 @@ class Data:
         self.Xtest = reshape(self.Xtest) 
         self.Xval = reshape(self.Xval) 
 
-    def resample_random_combinations(self, aug_factor=5):
-        """Makes random combinations of a single channel"""
+    # def resample_random_combinations(self, aug_factor=5):
+    #     """Makes random combinations of a single channel"""
+    #
+    #     np.random.seed(0)
+    #     def make_combinations(X):
+    #         return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
+    #
+    #     self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
+    #     # TODO: Data augmentation should not be performed on test and validation set
+    #     # Should be resampled_without_replacement
+    #     self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
+    #     self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
 
-        np.random.seed(0)
-        def make_combinations(X):
-            return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
-
-        self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
-        # TODO: Data augmentation should not be performed on test and validation set
-        # Should be resampled_without_replacement
-        self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
-        self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
 
     def plot_data(self):
         n_users = len(np.unique(self.ytrain))
@@ -92,11 +118,12 @@ class Data:
         print(
             "\nRaw data shape: ", self.Xraw.shape, \
             "\nLabels shape: ", self.yraw.shape,  \
-            "\nUnique labels: ", np.unique(self.yraw),  \
             "\nShape of test set:", self.Xtest.shape,  \
             "\nShape of train set:", self.Xtrain.shape,  \
             "\nShape of validation set:", self.Xval.shape, \
-            "\nFraction of single class in test set: ", np.mean(self.ytest==0), \
+            "\nUnique labels: ", np.unique(self.yraw),  \
+            "\nFraction of test labels: ", [np.round(np.mean(self.ytest==i), 2) for i in np.unique(self.ytest)], \
+            "\nFraction of train labels: ", [np.round(np.mean(self.ytrain==i), 2) for i in np.unique(self.ytrain)], \
             "\ndtype of inputs: ", self.xtr.dtype
             )
 
@@ -129,37 +156,36 @@ def test_accuracy(data_objects, models):
         print(f"Model {i}: {D.acc_te(model)*100:.1f}%")
 
 
-# Resampling Functions  
-def resample_by_user(make_combinations, X, y):
+# Data Functions 
+def act_on_user(func, X, y):
     """
-    Takes in a given procedure for making combinations and 
-    applies it to each individual user
+    Takes in a given function for grouping or resampling 
+    and applies it to individual users, creating corresponding label.
     """
-
     newX = []
     newy = []
-    for u in np.unique(y):    # Loop over all users 
+    for u in np.unique(y):    # Loop over all users
 
-        Xuser = X[y==u]    
-        Xcomb = make_combinations(Xuser)
+        Xuser = X[y==u]   
+        Xtrans = func(Xuser)
 
-        newX.append(Xcomb)
-        newy.append(np.full(len(Xcomb), u))
+        newX.append(Xtrans)             # Store new shape 
+        newy.append(np.full(len(Xtrans), u))   # Make new label
 
     return np.concatenate(newX), np.concatenate(newy)
 
-
-def resample_with_replacement(X, n_channels, no_combinations):
-    """From X.shape[0] choose n_channels, repeated no_combinations times."""
-
-    result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
-    for i in range(no_combinations):
-        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)]   # index 0 to match shape
-
-    # Reshape into correct number of channels.
-    # Accounts for case where both triggers and releases are considered.
-    return result.reshape((no_combinations, n_channels*X.shape[1], *X.shape[2:]))
-
+#
+# def resample_with_replacement(X, n_channels, no_combinations):
+#     """From X.shape[0] choose n_channels, repeated no_combinations times."""
+#
+#     result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
+#     for i in range(no_combinations):
+#         result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)]   # index 0 to match shape
+#
+#     # Reshape into correct number of channels.
+#     # Accounts for case where both triggers and releases are considered.
+#     return result.reshape((no_combinations, n_channels*X.shape[1], *X.shape[2:]))
+#
 
 # Loading function 
 def load_data(dataPath, triggers=True, releases=False, transforms=False):

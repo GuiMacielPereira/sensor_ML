@@ -145,3 +145,14 @@ def resample_trigs_rels(X, no_combinations):
 #     def make_combinations(X):
 #         return resample_trigs_rels(X, no_combinations=5*len(X))
 #     self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
+
+def group_presses(x, n_elements):
+    """
+    Performs a split of array x into groups with n_elements. 
+    Corrects for non compatible size of x
+    """
+    batch_size, _, input_size = x.shape
+    assert n_elements<=batch_size, "Cannot form groups bigger than the number of triggers available"
+    x = x[: batch_size - (batch_size % n_elements), :, :]  # Discard any final points to match size
+    return x.reshape(-1, n_elements, input_size)
+
