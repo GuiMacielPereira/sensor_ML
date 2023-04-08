@@ -1,99 +1,201 @@
-
-# Functions used for processing raw data
-# i.e. Selecting triggers and releases and plots
-
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
-class TriggersAndReleases:
+class Data:
+    def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
+        self.Xraw, self.yraw = load_data(dataPath, triggers, releases, transforms)
 
-    def __init__(self, signal : np.array):
-        self.signal = signal.flatten()
+    def split(self):
+        Xtrain, self.Xtest, ytrain, self.ytest = train_test_split(self.Xraw, self.yraw, test_size=0.15, random_state=42)
+        self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(Xtrain, ytrain, test_size=0.15, random_state=42)
 
-    def run(self):
-        self.find_idxs()
-        self.cut_windows()
-        self.print_findings()
+    def normalize(self):
+        """Normalise datasets according to fixed value from train set"""
+        # Fix normalisation value
+        xmax = np.mean(np.max(self.Xtrain, axis=-1, keepdims=True), axis=0, keepdims=True)     # Hard coding the normalization severely affects validation accuracy
+
+        self.Xtrain /= xmax
+        self.Xtest /= xmax
+        self.Xval /= xmax
         
+        print("Train, test and validation data normalized to:")
+        for x in (self.Xtrain, self.Xtest, self.Xval):
+            print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
 
-    def find_idxs(self, zero_threshold=0.05):
-        """
-        Finds the indexes of the signal for the beggining of trigger and end of release
-        """
-        zerosIdx = np.argwhere(self.signal<=zero_threshold)        # Define zero as anything below harcoded value 
-        jumpIdx = np.argwhere(np.diff(zerosIdx[:, 0])>1)   # Non-consecutive zeros
-        trigIdx =  zerosIdx[jumpIdx]
-        releaseIdx = zerosIdx[jumpIdx+1]
-
-        self.trigger_idxs = trigIdx.flatten()
-        self.release_idxs = releaseIdx.flatten()
-
-
-    def cut_windows(self, width=32):
-        clean_triggers = []
-        clean_releases = []
-        noisy_triggers = []
-        short_triggers = []
-
-        for i, j in zip(self.trigger_idxs, self.release_idxs):
-            trigger = self.signal[i:i+width]
-            release = self.signal[j-width:j]
-
-            if np.mean(trigger<=0.5)>=0.8:   # If 80% of the signal is below 0.5 
-                noisy_triggers.append(trigger)
+    def reshape_for_lstm(self, input_size, sliding=False):
+        
+        def reshape(x):
+            x = x.reshape(x.shape[0], x.shape[1] * x.shape[2])     # Concatenate several triggers together, if multiple triggers present
+            if sliding:
+                res = []
+                for i in range(x.shape[-1] - input_size + 1):
+                    res.append(x[:, i:i+input_size])
+                return np.concatenate(res, axis=1)
             else:
-                if np.any(trigger[-int(len(trigger)/3):]<=1.5):    # If final third of signal does not fall below 1.5 
-                    short_triggers.append(trigger)
-                else:
-                    # TODO: Need to confirm that approach below is matching up triggers to releases correctly
-                    clean_triggers.append(trigger) 
-                    clean_releases.append(release)
+                if x.shape[-1] % input_size: raise ValueError("Splitting size not matching!")
+                return x.reshape((x.shape[0], -1, input_size))
 
-        self.clean_triggers = np.array(clean_triggers)
-        self.clean_releases= np.array(clean_releases)
-        self.noisy_triggers = np.array(noisy_triggers)
-        self.short_triggers = np.array(short_triggers)
+        self.Xtrain = reshape(self.Xtrain) 
+        self.Xtest = reshape(self.Xtest) 
+        self.Xval = reshape(self.Xval) 
 
-    def print_findings(self):
-        print(f"\nSignal shape: {self.signal.shape}")
-        print(f"Excluded noisy triggers: {self.noisy_triggers.shape}")
-        print(f"Excluded short triggers: {self.short_triggers.shape}")
-        print(f"Included clean triggers: {self.clean_triggers.shape}")
-        print(f"Included clean releases: {self.clean_releases.shape}")
+    def resample_random_combinations(self, aug_factor=5):
+        """Makes random combinations of a single channel"""
 
-    def plot_signal(self, upTo=5000):
-        plt.figure(figsize=(30, 5))
-        signal = self.signal[:upTo]
-        plt.plot(range(len(signal)), signal, "b.")
+        np.random.seed(0)
+        def make_combinations(X):
+            return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
 
-    def plot_clean(self):
-        plot(self.clean_triggers)
-        plot(self.clean_releases)
-        # TODO: Change to plot_concat and find an interactive way to look at data on notebook
+        self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
+        # TODO: Data augmentation should not be performed on test and validation set
+        # Should be resampled_without_replacement
+        self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
+        self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
 
-    def plot_noisy(self):
-        plot_concat(self.noisy_triggers)
+    def plot_data(self):
+        n_users = len(np.unique(self.ytrain))
+        n_ch = self.Xtrain.shape[1]
+        plt.figure(figsize=(n_users*5, n_ch*5))
+        plt.suptitle("Mean and std of signals for users and channels")
+        plt.tight_layout()
+        for i, u in enumerate(np.unique(self.ytrain)):
+            X = self.Xtrain[self.ytrain==u]
+            Xmean = np.mean(X, axis=0, keepdims=True)
+            Xstd = np.std(X, axis=0, keepdims=True)
+            for j, (mean, std) in enumerate(zip(Xmean[0], Xstd[0])):
+                plt.subplot(n_ch, n_users, n_users*j + i+1)
+                plt.title(f"user={i} ch={j}")
+                plt.errorbar(np.arange(len(mean)), mean, std, fmt="b.")
+                plt.xticks([])
 
-    def plot_short(self):
-        plot_concat(self.short_triggers)
+    def tensors_to_device(self):
+        # Use GPU if available 
+        self.device = torch.device('cuda') if  torch.cuda.is_available() else torch.device('cpu')
+        self.dtype = torch.float32
+        print("Using Device: ", self.device, ", dtype: ", self.dtype)
 
-    def get_triggers(self):
-        return self.clean_triggers
+        def to_tensor(X, y):
+            xt = torch.tensor(X, dtype=self.dtype).to(self.device)
+            yt = torch.tensor(y, dtype=torch.long).to(self.device)    # Use for CrossEntropyLoss
+            return xt, yt 
+        
+        self.xtr, self.ytr = to_tensor(self.Xtrain, self.ytrain)
+        self.xv, self.yv = to_tensor(self.Xval, self.yval)
+        self.xte, self.yte = to_tensor(self.Xtest, self.ytest)
 
-    def get_releases(self):
-        return self.clean_releases
+        # Create trainset in the correct format for dataloader
+        self.trainset = [[x, y] for (x, y) in zip(self.xtr, self.ytr)]
 
-def plot(triggers, nx_plots=10, ny_plots=2):
-    plt.figure(figsize=(nx_plots*2, ny_plots*2))
-    for i in range(nx_plots * ny_plots):
-        plt.subplot(ny_plots, nx_plots, i+1)
-        trig = triggers[i]
-        plt.plot(range(len(trig)), trig, "b.")
-        plt.xticks([])
+    def print_shapes(self):
+        print(
+            "\nRaw data shape: ", self.Xraw.shape, \
+            "\nLabels shape: ", self.yraw.shape,  \
+            "\nUnique labels: ", np.unique(self.yraw),  \
+            "\nShape of test set:", self.Xtest.shape,  \
+            "\nShape of train set:", self.Xtrain.shape,  \
+            "\nShape of validation set:", self.Xval.shape, \
+            "\nFraction of single class in test set: ", np.mean(self.ytest==0), \
+            "\ndtype of inputs: ", self.xtr.dtype
+            )
 
-def plot_concat(triggers):
-    if len(triggers)==0: return 
-    false_sig = np.concatenate(triggers)
-    plt.figure(figsize=(30, 5))
-    plt.plot(np.arange(len(false_sig)), false_sig, "b.")
+    def acc_tr(self, model):
+        return acc(model, self.xtr, self.ytr)
+
+    def acc_val(self, model):
+        return acc(model, self.xv, self.yv)
+
+    def acc_te(self, model):
+        return acc(model, self.xte, self.yte)
+
+    def loss_val(self, model, criterion):
+        with torch.no_grad():    # Each time model is called, need to avoid updating the weights
+            return criterion(model(self.xv), self.yv).item()
+ 
+    def loss_tr(self, model, criterion):
+        with torch.no_grad():    # Each time model is called, need to avoid updating the weights
+            return criterion(model(self.xtr), self.ytr).item()
+
+def acc(model, x, y):
+    with torch.no_grad():
+        out = model(x)
+        _, pred = torch.max(out.data, 1)
+        return (pred==y).detach().cpu().numpy().mean()
+
+def test_accuracy(data_objects, models):
+    print("Test Accuracy:")
+    for i, (D, model) in enumerate(zip(data_objects, models)):
+        print(f"Model {i}: {D.acc_te(model)*100:.1f}%")
+
+
+# Resampling Functions  
+def resample_by_user(make_combinations, X, y):
+    """
+    Takes in a given procedure for making combinations and 
+    applies it to each individual user
+    """
+
+    newX = []
+    newy = []
+    for u in np.unique(y):    # Loop over all users 
+
+        Xuser = X[y==u]    
+        Xcomb = make_combinations(Xuser)
+
+        newX.append(Xcomb)
+        newy.append(np.full(len(Xcomb), u))
+
+    return np.concatenate(newX), np.concatenate(newy)
+
+
+def resample_with_replacement(X, n_channels, no_combinations):
+    """From X.shape[0] choose n_channels, repeated no_combinations times."""
+
+    result = np.zeros((no_combinations, n_channels, *X.shape[1:]))
+    for i in range(no_combinations):
+        result[i] = X[np.random.randint(0, X.shape[0], size=n_channels)]   # index 0 to match shape
+
+    # Reshape into correct number of channels.
+    # Accounts for case where both triggers and releases are considered.
+    return result.reshape((no_combinations, n_channels*X.shape[1], *X.shape[2:]))
+
+
+# Loading function 
+def load_data(dataPath, triggers=True, releases=False, transforms=False):
+
+    assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
+    data = np.load(dataPath)
+
+    # Check different users
+    users = np.unique(np.array([key.split("_")[0] for key in data], dtype=str))
+
+    # Build X data and corresponding labels
+    Xraw = []
+    yraw = []
+
+    for u in users:
+
+        userX = []
+
+        if triggers:
+            userX.append(data[u+"_triggers"])
+            if transforms:
+                Xt = np.diff(data[u+"_triggers"], axis=-1)
+                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))   # Add zeros to end of each signal to match shape
+                # Xt = np.diff(data[u+"_triggers"], n=2, axis=-1)
+                # userX.append(np.pad(Xt, pad_width=((0, 0), (1, 1))))
+        if releases:
+            userX.append(data[u+"_releases"])
+            if transforms:
+                Xt = np.diff(data[u+"_releases"], axis=-1)
+                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))
+        
+        Xraw.append(np.stack(userX, axis=1))
+        yraw.append(np.full(len(userX[0]), np.argwhere(users==u)[0]))
+
+    Xraw = np.concatenate(Xraw)
+    yraw = np.concatenate(yraw)
+    return Xraw, yraw
+
 

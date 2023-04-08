@@ -106,3 +106,42 @@ class lstm_many_to_many(nn.Module):
         x, _ = self.lstm(x.squeeze()) # out shape (n_seq, hidden_size) 
         x = self.linear(x)
         return x
+
+
+# Function used for loading long windows of data
+def load_long_data(dataPath):
+    data = np.load(dataPath)
+
+    Xraw = []
+    yraw = []
+
+    for i, key in enumerate(data):
+        X = data[key]
+        Xraw.append(X)
+        yraw.append(np.full(len(X), i))
+
+    Xraw = np.concatenate(Xraw)[:, np.newaxis, :]
+    yraw = np.concatenate(yraw)
+    return Xraw, yraw
+
+# Resample triggers and releases
+def resample_trigs_rels(X, no_combinations):
+    """
+    From X with two channels, one for trigers and another for releases,
+    create random combinations between triggers and releases. 
+    """
+
+    result = np.zeros((no_combinations, 2, X.shape[-1]))
+    for i in range(no_combinations):
+        result[i, 0] = X[np.random.randint(0, X.shape[0]), 0] 
+        result[i, 1] = X[np.random.randint(0, X.shape[0]), 1] 
+    return result
+
+# # This function was called under the Data Class:
+# def resample_trigs_rels(self):
+#     """Assigns triggers to releases randomly."""
+#     # Generally not used, no advantage observed from this type of data augmentation
+#     np.random.seed(0)
+#     def make_combinations(X):
+#         return resample_trigs_rels(X, no_combinations=5*len(X))
+#     self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
