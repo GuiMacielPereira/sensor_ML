@@ -10,8 +10,8 @@ from peratouch.networks import CNN
 from peratouch.config import datapath_five_users
 
 D = Data(datapath_five_users, triggers=True, releases=False)
-D.shuffle()
 D.split()
+D.balance_train()
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()
@@ -33,7 +33,6 @@ from peratouch.config import datapath_five_users
 D = Data(datapath_five_users, triggers=True, releases=False)
 D.group_presses()
 D.split()
-D.shuffle_presses_train()
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()

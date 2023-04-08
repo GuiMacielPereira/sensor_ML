@@ -77,6 +77,16 @@ x = x.reshape(batch_size, -1, input_size)
 print(x)
 
 
+#%%
+import numpy as np
+x = np.arange(50).reshape((5, 2, 5))
+
+print(x)
+shape = x.shape
+x = x.reshape(shape[0], -1)
+x = x.reshape(shape)
+print(x)
+
 
 
 

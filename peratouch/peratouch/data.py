@@ -3,10 +3,14 @@ import torch
 import sklearn
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from functools import partial
+from imblearn.over_sampling import RandomOverSampler
 
 class Data:
     def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases, transforms)
+
+
 
     def group_presses(self, n_elements=3):
 
@@ -25,15 +29,24 @@ class Data:
         self.Xtrain, Xtest, self.ytrain, ytest = train_test_split(self.Xraw, self.yraw, test_size=0.20, random_state=42)
         self.Xtest, self.Xval, self.ytest, self.yval = train_test_split(Xtest, ytest, test_size=0.50, random_state=42)
 
-    def shuffle_presses_train(self):
+    def balance_train(self): 
+        # For some weird reason, resampler takes only up to 2 dims, so need to do some reshaping tricks
+        batch_size, n_ch, in_s = self.Xtrain.shape
+        Xtrain = self.Xtrain.reshape(batch_size, -1)
+        Xtrain, self.ytrain = RandomOverSampler(random_state=42).fit_resample(Xtrain, self.ytrain)
+        self.Xtrain = Xtrain.reshape(-1, n_ch, in_s)
 
-        def shuffle(x):
-            batch_size, _, input_size = x.shape
-            x = x.reshape(-1, input_size)
-            x = sklearn.utils.shuffle(x)
-            return x.reshape(batch_size, -1, input_size)
-
-        self.Xtrain, self.ytrain = act_on_user(shuffle, self.Xtrain, self.ytrain)
+    # # NOTE: Tried this function, much worse accuracy
+    # # Destroyes consecutive presses by random sampling
+    # def shuffle_presses_train(self):
+    #
+    #     def shuffle(x):
+    #         batch_size, _, input_size = x.shape
+    #         x = x.reshape(-1, input_size)
+    #         x = sklearn.utils.shuffle(x)
+    #         return x.reshape(batch_size, -1, input_size)
+    #
+    #     self.Xtrain, self.ytrain = act_on_user(shuffle, self.Xtrain, self.ytrain)
 
     def normalize(self, verbose=True):
         """Normalise datasets according to fixed value from train set"""
@@ -66,18 +79,18 @@ class Data:
         self.Xtest = reshape(self.Xtest) 
         self.Xval = reshape(self.Xval) 
 
-    # def resample_random_combinations(self, aug_factor=5):
-    #     """Makes random combinations of a single channel"""
+    # NOTE: This method creates groups of 3 triggers by random resampling
+    # Acts on each dataset separately, so test data is still completely separate
+    # This provides more information per multiple triggers, and so achieves much higher accuracies
+    # def resample_datasets(self):
     #
     #     np.random.seed(0)
     #     def make_combinations(X):
-    #         return resample_with_replacement(X, n_channels=3, no_combinations=aug_factor*len(X))
+    #         return resample_with_replacement(X, n_channels=3, no_combinations=len(X))
     #
-    #     self.Xtrain, self.ytrain = resample_by_user(make_combinations, self.Xtrain, self.ytrain)
-    #     # TODO: Data augmentation should not be performed on test and validation set
-    #     # Should be resampled_without_replacement
-    #     self.Xtest, self.ytest = resample_by_user(make_combinations, self.Xtest, self.ytest)
-    #     self.Xval, self.yval = resample_by_user(make_combinations, self.Xval, self.yval)
+    #     self.Xtrain, self.ytrain = act_on_user(make_combinations, self.Xtrain, self.ytrain)
+    #     self.Xtest, self.ytest = act_on_user(make_combinations, self.Xtest, self.ytest)
+    #     self.Xval, self.yval = act_on_user(make_combinations, self.Xval, self.yval)
 
 
     def plot_data(self):
@@ -174,7 +187,7 @@ def act_on_user(func, X, y):
 
     return np.concatenate(newX), np.concatenate(newy)
 
-#
+
 # def resample_with_replacement(X, n_channels, no_combinations):
 #     """From X.shape[0] choose n_channels, repeated no_combinations times."""
 #
@@ -185,7 +198,7 @@ def act_on_user(func, X, y):
 #     # Reshape into correct number of channels.
 #     # Accounts for case where both triggers and releases are considered.
 #     return result.reshape((no_combinations, n_channels*X.shape[1], *X.shape[2:]))
-#
+
 
 # Loading function 
 def load_data(dataPath, triggers=True, releases=False, transforms=False):
