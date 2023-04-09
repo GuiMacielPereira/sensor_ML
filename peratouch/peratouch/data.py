@@ -31,10 +31,10 @@ class Data:
 
     def balance_train(self): 
         # For some weird reason, resampler takes only up to 2 dims, so need to do some reshaping tricks
-        batch_size, n_ch, in_s = self.Xtrain.shape
+        batch_size, n_ch, in_size = self.Xtrain.shape
         Xtrain = self.Xtrain.reshape(batch_size, -1)
         Xtrain, self.ytrain = RandomOverSampler(random_state=42).fit_resample(Xtrain, self.ytrain)
-        self.Xtrain = Xtrain.reshape(-1, n_ch, in_s)
+        self.Xtrain = Xtrain.reshape(-1, n_ch, in_size)
 
     # # NOTE: Tried this function, much worse accuracy
     # # Destroyes consecutive presses by random sampling
@@ -136,6 +136,7 @@ class Data:
             "\nShape of validation set:", self.Xval.shape, \
             "\nUnique labels: ", np.unique(self.yraw),  \
             "\nFraction of test labels: ", [np.round(np.mean(self.ytest==i), 2) for i in np.unique(self.ytest)], \
+            "\nFraction of validation labels: ", [np.round(np.mean(self.yval==i), 2) for i in np.unique(self.yval)], \
             "\nFraction of train labels: ", [np.round(np.mean(self.ytrain==i), 2) for i in np.unique(self.ytrain)], \
             "\ndtype of inputs: ", self.xtr.dtype
             )
@@ -148,6 +149,9 @@ class Data:
 
     def acc_te(self, model):
         return acc(model, self.xte, self.yte)
+
+    def matthews_corrcoef_te(self, model):
+        return matthews_corrcoef(model, self.xte, self.yte)
 
     def loss_val(self, model, criterion):
         with torch.no_grad():    # Each time model is called, need to avoid updating the weights
@@ -163,11 +167,17 @@ def acc(model, x, y):
         _, pred = torch.max(out.data, 1)
         return (pred==y).detach().cpu().numpy().mean()
 
-def test_accuracy(data_objects, models):
-    print("Test Accuracy:")
-    for i, (D, model) in enumerate(zip(data_objects, models)):
-        print(f"Model {i}: {D.acc_te(model)*100:.1f}%")
+def matthews_corrcoef(model, x, y):
+    with torch.no_grad():
+        out = model(x)
+        _, pred = torch.max(out.data, 1)
+        pred = pred.detach().cpu().numpy()
+        return sklearn.metrics.matthews_corrcoef(y, pred)
 
+def test_metrics(data_objects, models):
+    print("\nTest dataset metrics:")
+    for i, (D, model) in enumerate(zip(data_objects, models)):
+        print(f"Model {i}: Accuracy = {D.acc_te(model)*100:.1f}%, Matthews Corr Coef = {D.matthews_corrcoef_te(model):.2f}")
 
 # Data Functions 
 def act_on_user(func, X, y):
