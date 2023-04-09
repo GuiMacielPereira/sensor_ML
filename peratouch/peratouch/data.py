@@ -10,8 +10,6 @@ class Data:
     def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
         self.Xraw, self.yraw = load_data(dataPath, triggers, releases, transforms)
 
-
-
     def group_presses(self, n_elements=3):
 
         def group(x):
@@ -140,44 +138,6 @@ class Data:
             "\nFraction of train labels: ", [np.round(np.mean(self.ytrain==i), 2) for i in np.unique(self.ytrain)], \
             "\ndtype of inputs: ", self.xtr.dtype
             )
-
-    def acc_tr(self, model):
-        return acc(model, self.xtr, self.ytr)
-
-    def acc_val(self, model):
-        return acc(model, self.xv, self.yv)
-
-    def acc_te(self, model):
-        return acc(model, self.xte, self.yte)
-
-    def matthews_corrcoef_te(self, model):
-        return matthews_corrcoef(model, self.xte, self.yte)
-
-    def loss_val(self, model, criterion):
-        with torch.no_grad():    # Each time model is called, need to avoid updating the weights
-            return criterion(model(self.xv), self.yv).item()
- 
-    def loss_tr(self, model, criterion):
-        with torch.no_grad():    # Each time model is called, need to avoid updating the weights
-            return criterion(model(self.xtr), self.ytr).item()
-
-def acc(model, x, y):
-    with torch.no_grad():
-        out = model(x)
-        _, pred = torch.max(out.data, 1)
-        return (pred==y).detach().cpu().numpy().mean()
-
-def matthews_corrcoef(model, x, y):
-    with torch.no_grad():
-        out = model(x)
-        _, pred = torch.max(out.data, 1)
-        pred = pred.detach().cpu().numpy()
-        return sklearn.metrics.matthews_corrcoef(y, pred)
-
-def test_metrics(data_objects, models):
-    print("\nTest dataset metrics:")
-    for i, (D, model) in enumerate(zip(data_objects, models)):
-        print(f"Model {i}: Accuracy = {D.acc_te(model)*100:.1f}%, Matthews Corr Coef = {D.matthews_corrcoef_te(model):.2f}")
 
 # Data Functions 
 def act_on_user(func, X, y):

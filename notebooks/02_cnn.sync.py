@@ -4,8 +4,9 @@
 
 #%%
 # Standard example 
-from peratouch.data import Data, test_accuracy
+from peratouch.data import Data 
 from peratouch.trainer import Trainer, plot_train 
+from peratouch.results import Results 
 from peratouch.networks import CNN
 from peratouch.config import datapath_five_users
 
@@ -16,14 +17,16 @@ D.normalize()
 D.tensors_to_device()
 D.print_shapes()
 #%%
-models = [CNN(input_ch=1, n_filters=8, n_hidden=128, out_size=5)]
-trainers = [Trainer(D)]
-for model, T in zip(models, trainers):
-    T.setup(model, max_epochs=50, batch_size=5000)
-    T.train_model(model)
-plot_train(trainers)
-test_accuracy([D, D], models)
+model = CNN(input_ch=1, n_filters=8, n_hidden=128, out_size=5)
+T = Trainer(D)
+T.setup(model, max_epochs=100, batch_size=5000)
+T.train_model(model)
 
+plot_train([T])
+
+R = Results(D, model)
+R.test_metrics(report=True, conf_matrix=True)
+# R.find_most_uncertain_preds()
 #%%
 # Look at 3 channels
 from peratouch.data import Data, test_accuracy

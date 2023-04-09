@@ -122,6 +122,7 @@ class TriggersAndReleases:
         print(f"\nSaved file in {str(save_path)}")
 
 def plot(triggers, nx_plots=10, ny_plots=2):
+    triggers = triggers.reshape(triggers.shape[0], -1)
     plt.figure(figsize=(nx_plots*2, ny_plots*2))
     for i in range(nx_plots * ny_plots):
         plt.subplot(ny_plots, nx_plots, i+1)

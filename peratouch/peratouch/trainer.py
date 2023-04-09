@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from peratouch.data import Data
+from peratouch.results import Results
 
 class Trainer:
 
-    def __init__(self, D:Data):
+    def __init__(self, Data : Data):
         """Links traininer to a given dataset"""
-        self.Data = D
+        self.Data = Data
     
     def setup(self, model, batch_size=256, learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, verbose=True):
         
@@ -78,11 +79,11 @@ class Trainer:
         # I believe this is a bug from pytorch, so while this is not fixed, DO NOT UNCOMMENT
         # model.eval()   # Disables some layers such as drop-out and batchnorm
 
-        # Evaluate accuracies and losses 
-        val_loss = self.Data.loss_val(model, self.criterion)
-        tr_loss = self.Data.loss_tr(model, self.criterion)
-        tr_acc = self.Data.acc_tr(model) 
-        val_acc = self.Data.acc_val(model) 
+        R = Results(self.Data, model)
+        val_loss = R.loss_val(self.criterion)
+        tr_loss = R.loss_tr(self.criterion)
+        tr_acc = R.acc_tr() 
+        val_acc = R.acc_val() 
 
         # At the end of each epoch, evaluate model 
         self.losses.append([tr_loss, val_loss])
