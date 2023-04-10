@@ -88,5 +88,19 @@ x = x.reshape(shape)
 print(x)
 
 
+#%%
+import matplotlib as mpl
+import seaborn as sns
+# print(mpl.rc_params.keys())
 
+colors = sns.color_palette('husl', 9).as_hex() 
+print(colors)
+colors = [(c, c) for c in colors]
+lines = [(':', '-') for c in colors]
+print(colors)
+print(lines)
 
+colors = [item for sublist in colors for item in sublist]
+lines = [item for sublist in lines for item in sublist]
+print(colors)
+print(lines)

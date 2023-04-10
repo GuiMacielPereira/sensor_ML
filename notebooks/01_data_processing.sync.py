@@ -16,10 +16,10 @@ key = list(data.keys())[0]
 TR = TriggersAndReleases(data)
 TR.plot_signal(key)
 TR.run()
+#%%
 TR.plot_clean(key)
 # %%
-TR.plot_noisy(key)
-TR.plot_short(key)
+TR.plot_discarded(key)
 # %%
 # Compare the mean and std of the signals for all the users involved
 TR.plot_means_std()

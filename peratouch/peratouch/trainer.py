@@ -1,10 +1,13 @@
 # Script to store all of the main functions for cleaning and loading data
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from peratouch.data import Data
 from peratouch.results import Results
+# Plotting imports
+import matplotlib.pyplot as plt
+import seaborn as sns
+from cycler import cycler
 
 class Trainer:
 
@@ -32,6 +35,7 @@ class Trainer:
 
         self.val_loss_min = np.inf   # Used to store minimul val loss during training
         self.verbose = verbose
+        self.model_name = model.__class__.__name__
 
     def train_model(self, model):
         """
@@ -104,6 +108,30 @@ class Trainer:
             torch.save(model.state_dict(), './state_dict.pt')
             self.val_loss_min = val_loss   # Update
 
+    def plot_train(self, plot_loss=True, plot_acc=True):
+        """ Plot accuracies and losses during training of the model """
+
+        sns.set_theme()
+        # First, set cycler for colors and linestyles
+        colors = sns.color_palette("husl", 9)
+        # Build repeating colors and linestyles
+        colors = [(c, c) for c in colors]
+        lines = [('--', '-') for c in colors]
+        # Flatten list of sublists
+        colors = [item for sublist in colors for item in sublist]
+        lines = [item for sublist in lines for item in sublist]
+
+        plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines)))
+
+        if plot_loss:
+            plt.plot(self.epochs, self.losses, label=[f"{self.model_name} Train Loss", f"{self.model_name} Val Loss"])
+        if plot_acc:
+            plt.plot(self.epochs, self.accuracies, label=[f"{self.model_name} Train Acc", f"{self.model_name} Val Acc"])
+
+        plt.legend()
+        plt.xlabel("Epochs")
+        plt.ylim(0, 1)
+
 def weight_init(m):
     """
     Method to insure that weights of each layer are initialized always to 
@@ -114,17 +142,4 @@ def weight_init(m):
         torch.nn.init.kaiming_normal_(m.weight)     # Read somewhere that Kaiming initialization is advisable
         torch.nn.init.zeros_(m.bias)
 
-
-def plot_train(trainers, plot_loss=True, plot_acc=True):
-    """ Plot accuracies and losses during training of the model """
-    plt.figure(figsize=(8, 5))
-    for i, T in enumerate(trainers):
-        for data, lab in zip([T.accuracies, T.losses], ["Accuracy", "Loss"]):
-            if (lab=="Accuracy") & ~plot_acc: continue
-            if (lab=="Loss") & ~plot_loss: continue
-            plt.plot(T.epochs, data, label=[f"model {i}, Train "+lab, f"model {i}, Val "+lab])
-    plt.legend()
-    plt.xlabel("Epochs")
-    plt.ylim(0, 1)
-    
 

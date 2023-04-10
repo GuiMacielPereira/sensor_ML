@@ -2,7 +2,7 @@
 # i.e. Selecting triggers and releases and plots
 
 import numpy as np
-import matplotlib.pyplot as plt
+from peratouch.plot import plot_grid, plot_X, plot_flatten
 
 class TriggersAndReleases:
 
@@ -76,33 +76,21 @@ class TriggersAndReleases:
             print(f"Included clean triggers: {self.clean_triggers[key].shape}")
             print(f"Included clean releases: {self.clean_releases[key].shape}")
 
-    def plot_signal(self, key, upTo=5000):
-        plt.figure(figsize=(30, 5))
-        signal = self.data[key].squeeze()[:upTo]
-        plt.plot(range(len(signal)), signal, "b.")
+    def plot_signal(self, key):
+        plot_flatten(self.data[key])
 
     def plot_clean(self, key):
-        plot(self.clean_triggers[key])
-        plot(self.clean_releases[key])
-        # TODO: Change to plot_concat and find an interactive way to look at data on notebook
+        plot_grid(self.clean_triggers[key])
+        plot_grid(self.clean_releases[key])
+        # TODO: Find an interactive way to look at data on notebook
 
-    def plot_noisy(self, key):
-        plot_concat(self.noisy_triggers[key])
-
-    def plot_short(self, key):
-        plot_concat(self.short_triggers[key])
+    def plot_discarded(self, key):
+        plot_flatten(self.noisy_triggers[key])
+        plot_flatten(self.short_triggers[key])
 
     def plot_means_std(self):
-        plt.figure(figsize=(13, 7))
-        n_users = len(self.data)
-        for i, key in enumerate(self.data):
-            for j, sig in enumerate([self.clean_triggers[key], self.clean_releases[key]]):
-                plt.subplot(n_users, 2, 2*i+j+1)
-                sig_avg = np.mean(sig, axis=0)
-                sig_std = np.std(sig, axis=0)
-                plt.title(key+" mean+std")
-                plt.errorbar(np.arange(len(sig_avg)), sig_avg, sig_std, fmt="b.")
-                plt.xticks([])
+        plot_X(*dict_to_X_y(self.clean_triggers))
+        plot_X(*dict_to_X_y(self.clean_releases))
 
     def get_triggers(self):
         return self.clean_triggers
@@ -121,18 +109,18 @@ class TriggersAndReleases:
         for k in data_to_save: print(f"Saved {k} : {data_to_save[k].shape}")
         print(f"\nSaved file in {str(save_path)}")
 
-def plot(triggers, nx_plots=10, ny_plots=2):
-    triggers = triggers.reshape(triggers.shape[0], -1)
-    plt.figure(figsize=(nx_plots*2, ny_plots*2))
-    for i in range(nx_plots * ny_plots):
-        plt.subplot(ny_plots, nx_plots, i+1)
-        trig = triggers[i]
-        plt.plot(range(len(trig)), trig, "b.")
-        plt.xticks([])
 
-def plot_concat(triggers):
-    if len(triggers)==0: return 
-    false_sig = np.concatenate(triggers)
-    plt.figure(figsize=(30, 5))
-    plt.plot(np.arange(len(false_sig)), false_sig, "b.")
+def dict_to_X_y(dict):
+    """
+    Dirty function to convert data from dict format to X, y
+    Only used to input correct format on plotting function. 
+    """
+    X = []
+    y = []
+    for i, key in enumerate(dict):
+        X.append(dict[key])
+        y.append(np.full(len(dict[key]), i))
+    return np.concatenate(X)[:, np.newaxis, :], np.concatenate(y)
+
+
 

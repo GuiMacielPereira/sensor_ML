@@ -1,10 +1,8 @@
 import numpy as np
 import torch
-import sklearn
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-from functools import partial
 from imblearn.over_sampling import RandomOverSampler
+from peratouch.plot import plot_X
 
 class Data:
     def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
@@ -90,22 +88,9 @@ class Data:
     #     self.Xtest, self.ytest = act_on_user(make_combinations, self.Xtest, self.ytest)
     #     self.Xval, self.yval = act_on_user(make_combinations, self.Xval, self.yval)
 
-
     def plot_data(self):
-        n_users = len(np.unique(self.ytrain))
-        n_ch = self.Xtrain.shape[1]
-        plt.figure(figsize=(n_users*5, n_ch*5))
-        plt.suptitle("Mean and std of signals for users and channels")
-        plt.tight_layout()
-        for i, u in enumerate(np.unique(self.ytrain)):
-            X = self.Xtrain[self.ytrain==u]
-            Xmean = np.mean(X, axis=0, keepdims=True)
-            Xstd = np.std(X, axis=0, keepdims=True)
-            for j, (mean, std) in enumerate(zip(Xmean[0], Xstd[0])):
-                plt.subplot(n_ch, n_users, n_users*j + i+1)
-                plt.title(f"user={i} ch={j}")
-                plt.errorbar(np.arange(len(mean)), mean, std, fmt="b.")
-                plt.xticks([])
+        plot_X(self.Xtrain, self.ytrain)
+
 
     def tensors_to_device(self):
         # Use GPU if available 

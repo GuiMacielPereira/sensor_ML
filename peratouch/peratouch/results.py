@@ -1,8 +1,8 @@
-import numpy as np
 import torch
 import sklearn
 from peratouch.data import Data
-from peratouch.preprocessing import plot
+from peratouch.plot import plot_grid
+import seaborn as sns
 
 class Results:
     def __init__(self, Data : Data, model):
@@ -38,7 +38,8 @@ class Results:
         if report:
             print(sklearn.metrics.classification_report(self.Data.yte, preds))
         if conf_matrix:
-            sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte, preds)
+            with sns.axes_style('dark'):
+                sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte, preds)
 
     # TODO: Function below is working but needs adding labels
     def find_most_uncertain_preds(self):
@@ -47,8 +48,8 @@ class Results:
             out = self.model(self.Data.xte)
             loss_vals = cross_entropy(out, self.Data.yte)
             idxs_min = loss_vals.argsort(descending=True)     # First elements are the ones with higher losses 
-            worst_preds = self.Data.xte[idxs_min].detach().cpu().numpy()
-            plot(worst_preds)
+            worst_preds = self.Data.xte[idxs_min]       # No need to detach from device
+            plot_grid(worst_preds)
 
 def acc(model, x, y):
     with torch.no_grad():
