@@ -8,7 +8,7 @@ from peratouch.config import data_dir
 from peratouch.preprocessing import TriggersAndReleases
 # Width of triggers 
 width = 32 
-path = data_dir / "raw_npz" / "five_users_data.npz"
+path = data_dir / "raw_npz" / "five_users_main_collection.npz"
 data = np.load((path))
 # %%
 # Look at a few triggers of one of the users
