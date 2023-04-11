@@ -10,7 +10,7 @@ def plot_grid(batch):
         batch = batch[:30]
 
     nx_plots = 10
-    ny_plots = len(batch) // nx_plots
+    ny_plots = int(np.ceil(len(batch) / nx_plots))
     
     plt.figure(figsize=(nx_plots*2, ny_plots*2))
     plt.tight_layout()
@@ -27,9 +27,9 @@ def plot_flatten(batch):
     if points.size==0: return 
     plt.figure(figsize=(30, 5))
     plt.tight_layout()
-    if points.size > 5000: 
+    if len(points) > 5000: 
         points = points[:5000]
-    plt.plot(range(points.size), points, "b.")
+    plt.plot(range(len(points)), points, "b.")
 
 
 def plot_X(X, y):
