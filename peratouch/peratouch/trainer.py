@@ -8,6 +8,7 @@ from peratouch.results import Results
 import matplotlib.pyplot as plt
 import seaborn as sns
 from cycler import cycler
+import time
 
 class Trainer:
 
@@ -32,6 +33,7 @@ class Trainer:
         self.losses = []        # Track loss function
         self.accuracies = []    # Track train, validation and test accuracies
         self.epochs = []        # To track progress over epochs
+        self.times = []
 
         self.val_loss_min = np.inf   # Used to store minimul val loss during training
         self.verbose = verbose
@@ -64,9 +66,11 @@ class Trainer:
 
             self.evaluate_model(epoch, model)
 
-        print("Training Complete!")
+        print("\nTraining Complete!")
         print(f"Loading best weights for lowest validation loss={self.val_loss_min:.3f} ...")
         model.load_state_dict(torch.load('./state_dict.pt'))
+        print(f"\nAverage running time per epoch: {np.mean(self.times):.2f} seconds")
+        print(f"Total running time: {np.sum(self.times):.2f} seconds")
 
         # Transform into arrays
         self.losses = np.array(self.losses)
@@ -94,9 +98,9 @@ class Trainer:
         self.accuracies.append([tr_acc, val_acc])
         self.epochs.append(epoch)
 
-        if (self.verbose) & (epoch%10):
+        if (self.verbose) & (((epoch-1)%np.ceil(self.max_epochs/10))==0):       # Print 10 lines during training
             print(
-                f"End of epoch {epoch}:" \
+                f"End of epoch {epoch}: " \
                 f"loss_tr={tr_loss:5.3f}, " \
                 f"loss_val={val_loss:5.3f}, " \
                 f"train={tr_acc*100:4.1f}%, " \
@@ -107,6 +111,13 @@ class Trainer:
         if val_loss < self.val_loss_min:
             torch.save(model.state_dict(), './state_dict.pt')
             self.val_loss_min = val_loss   # Update
+
+        # Store running time of each epoch
+        if epoch==1:                # Start recording at first epoch
+            self.t = time.time() 
+        else:
+            self.times.append(time.time() - self.t)
+            self.t = time.time()
 
     def plot_train(self, plot_loss=True, plot_acc=True):
         """ Plot accuracies and losses during training of the model """

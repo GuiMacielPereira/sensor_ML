@@ -54,9 +54,12 @@ class Data:
         self.Xval /= xmax
         
         if verbose:
-            print("Train, test and validation data normalized to:")
-            for x in (self.Xtrain, self.Xtest, self.Xval):
-                print(f"{np.mean(np.max(x, axis=-1), axis=0)}")
+            norm = lambda x: np.mean(np.max(x, axis=-1), axis=0) 
+            print("Train, test and validation arrays normalized to:")
+            with np.printoptions(precision=4):
+                print(f"{norm(self.Xtrain)}, {norm(self.Xtest)}, {norm(self.Xval)}")
+            # for x in (self.Xtrain, self.Xtest, self.Xval):
+            #     print(f"{}")
 
     def reshape_for_lstm(self, input_size, sliding=False):
         
