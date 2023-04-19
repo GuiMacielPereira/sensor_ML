@@ -1,4 +1,13 @@
 setup.py
+peratouch/__init__.py
+peratouch/archive.py
+peratouch/config.py
+peratouch/data.py
+peratouch/networks.py
+peratouch/plot.py
+peratouch/preprocessing.py
+peratouch/results.py
+peratouch/trainer.py
 peratouch.egg-info/PKG-INFO
 peratouch.egg-info/SOURCES.txt
 peratouch.egg-info/dependency_links.txt

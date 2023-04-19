@@ -17,6 +17,14 @@ TR = TriggersAndReleases(data)
 TR.plot_signal(key)
 TR.run()
 #%%
+# Look at an interactive plot
+# from bokeh.plotting import figure, show
+# sig = TR.get_triggers()[key].flatten()
+# print(len(sig))
+# p = figure()
+# p.circle(x=np.arange(len(sig)), y=sig)
+# show(p)
+#%%
 TR.plot_clean(key)
 # %%
 TR.plot_discarded(key)

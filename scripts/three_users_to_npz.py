@@ -21,7 +21,7 @@ for f in path.glob('**/*.csv'):
 # Pass lists into arrays
 for key in data: data[key] = np.concatenate(data[key])
 
-save_path = data_dir / "raw_npz" / "three_users_data.npz"
+save_path = data_dir / "raw_npz" / "three_users_first_collection.npz"
 np.savez(save_path, **data)
 
 # Print shape of saved arrays 

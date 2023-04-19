@@ -27,8 +27,6 @@ def plot_flatten(batch):
     if points.size==0: return 
     plt.figure(figsize=(30, 5))
     plt.tight_layout()
-    if len(points) > 5000: 
-        points = points[:5000]
     plt.plot(range(len(points)), points, "b.")
 
 

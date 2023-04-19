@@ -8,9 +8,10 @@ from peratouch.data import Data
 from peratouch.trainer import Trainer 
 from peratouch.results import Results 
 from peratouch.networks import CNN
-from peratouch.config import datapath_five_users
+# from peratouch.config import datapath_five_users
+from peratouch.config import path_five_users_main, path_five_users_first
 
-D = Data(datapath_five_users, triggers=True, releases=False)
+D = Data(path_five_users_main, triggers=True, releases=False)
 D.split()
 # D.balance_train()
 D.normalize()
@@ -32,10 +33,12 @@ R.find_most_uncertain_preds()
 from peratouch.data import Data 
 from peratouch.trainer import Trainer  
 from peratouch.networks import CNN 
-from peratouch.config import datapath_five_users
-D = Data(datapath_five_users, triggers=True, releases=False)
+from peratouch.config import path_five_users_main, path_five_users_first
+from peratouch.results import Results
+D = Data(path_five_users_main, triggers=True, releases=False)
 D.group_presses()
 D.split()
+# D.resample_triggers()
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()
@@ -45,6 +48,7 @@ model = CNN(input_ch=3, n_filters=8, n_hidden=256, out_size=5)
 T = Trainer(D) 
 T.setup(model,learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, batch_size=5000)
 T.train_model(model)
+T.plot_train()
 
 R = Results(D, model)
 R.test_metrics(report=True, conf_matrix=True)

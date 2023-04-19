@@ -21,7 +21,7 @@ class TriggersAndReleases:
         self.print_findings()
         
 
-    def find_idxs(self, zero_threshold=0.05):
+    def find_idxs(self, zero_threshold=0.05):    # Rather arbitrary definition of the zero line 
         """
         Finds the indexes of the signal for the beggining of trigger and end of release
         """
@@ -52,10 +52,10 @@ class TriggersAndReleases:
                 trigger = signal[i:i+width]
                 release = signal[j-width:j]
 
-                if np.mean(trigger<=0.5)>=0.8:   # If 80% of the signal is below 0.5 
+                if np.mean(trigger<=1)>=0.6:   # If 60% of the signal is below 1 
                     noisy_triggers.append(trigger)
                 else:
-                    if np.any(trigger[-int(len(trigger)/3):]<=1.5):    # If final third of signal does not fall below 1.5 
+                    if np.any(trigger[-int(len(trigger)/3):]<=1.5):    # If final third of signal falls below 1.5 
                         short_triggers.append(trigger)
                     else:
                         # TODO: Need to confirm that approach below is matching up triggers to releases correctly
