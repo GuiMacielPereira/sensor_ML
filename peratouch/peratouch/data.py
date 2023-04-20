@@ -3,10 +3,11 @@ import torch
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from peratouch.plot import plot_X
+import sklearn
 
 class Data:
-    def __init__(self, dataPath, triggers=True, releases=False, transforms=False):
-        self.Xraw, self.yraw = load_data(dataPath, triggers, releases, transforms)
+    def __init__(self, dataPath, triggers=True, releases=False):
+        self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
 
     def group_presses(self, n_elements=3):
 
@@ -18,22 +19,37 @@ class Data:
 
         self.Xraw, self.yraw = act_on_user(group, self.Xraw, self.yraw)
 
-    # NOTE: This shuffle function was used when splitting was tried manually
-    # def shuffle(self):   # Shuffle presses randomly
-    #     self.Xraw, self.yraw = sklearn.utils.shuffle(self.Xraw, self.yraw, random_state=42)
+    # ------ New functions to run Cross Validation
+    def shuffle(self):   # Shuffle presses randomly
+        self.Xraw, self.yraw = sklearn.utils.shuffle(self.Xraw, self.yraw, random_state=42)
 
-    def split(self):
-        self.Xtrain, Xtest, self.ytrain, ytest = train_test_split(self.Xraw, self.yraw, test_size=0.20, random_state=42)
-        self.Xtest, self.Xval, self.ytest, self.yval = train_test_split(Xtest, ytest, test_size=0.50, random_state=42)
+    def halve_raw_data(self):
+        self.Xraw, _ = np.array_split(self.Xraw, 2)
+        self.yraw, _ = np.array_split(self.yraw, 2)
 
-    # NOTE: Dirty function to halve all datasets, used only to see how size of datasets affects accuracy
-    def halve_datasets(self):
-        self.Xtrain  = self.Xtrain[:int(len(self.Xtrain)/2)]
-        self.Xtest = self.Xtest[:int(len(self.Xtest)/2)]
-        self.Xval = self.Xval[:int(len(self.Xval)/2)]
-        self.ytrain = self.ytrain[:int(len(self.ytrain)/2)]
-        self.ytest = self.ytest[:int(len(self.ytest)/2)]
-        self.yval = self.yval[:int(len(self.yval)/2)]
+    def make_folds(self, n_folds=5):
+        kf = sklearn.model_selection.KFold(n_splits=n_folds, shuffle=True, random_state=42)
+        self.folds_idxs = kf.split(self.Xraw)
+
+    def next_fold(self):
+        train_idx, test_idx = next(self.folds_idxs)
+        test_idx, val_idx = np.array_split(test_idx, 2)     # Does not raise error if not equal split
+        self.Xtrain, self.Xtest, self.Xval = self.Xraw[train_idx], self.Xraw[test_idx], self.Xraw[val_idx]
+        self.ytrain, self.ytest, self.yval = self.yraw[train_idx], self.yraw[test_idx], self.yraw[val_idx]
+    # -------------------
+
+    # def split(self):
+    #     self.Xtrain, Xtest, self.ytrain, ytest = train_test_split(self.Xraw, self.yraw, test_size=0.20, random_state=42)
+    #     self.Xtest, self.Xval, self.ytest, self.yval = train_test_split(Xtest, ytest, test_size=0.50, random_state=42)
+
+    # # NOTE: Dirty function to halve all datasets, used only to see how size of datasets affects accuracy
+    # def halve_datasets(self):
+    #     self.Xtrain  = self.Xtrain[:int(len(self.Xtrain)/2)]
+    #     self.Xtest = self.Xtest[:int(len(self.Xtest)/2)]
+    #     self.Xval = self.Xval[:int(len(self.Xval)/2)]
+    #     self.ytrain = self.ytrain[:int(len(self.ytrain)/2)]
+    #     self.ytest = self.ytest[:int(len(self.ytest)/2)]
+    #     self.yval = self.yval[:int(len(self.yval)/2)]
 
     def balance_train(self): 
         # For some weird reason, resampler takes only up to 2 dims, so need to do some reshaping tricks
@@ -166,7 +182,7 @@ def resample_with_replacement(X, n_channels, no_combinations):
 
 
 # Loading function 
-def load_data(dataPath, triggers=True, releases=False, transforms=False):
+def load_data(dataPath, triggers=True, releases=False):
     assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
     data = np.load(dataPath)
 
@@ -182,15 +198,9 @@ def load_data(dataPath, triggers=True, releases=False, transforms=False):
 
         if triggers:
             userX.append(data[u+"_triggers"])
-            if transforms:
-                Xt = np.diff(data[u+"_triggers"], axis=-1)
-                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))   # Add zeros to end of each signal to match shape
-                # NOTE: Some transforms were tried at this point but were abandoned.
+            # NOTE: Some transforms were tried at this point but were abandoned.
         if releases:
             userX.append(data[u+"_releases"])
-            if transforms:
-                Xt = np.diff(data[u+"_releases"], axis=-1)
-                userX.append(np.pad(Xt, pad_width=((0, 0), (0, 1))))
         
         Xraw.append(np.stack(userX, axis=1))
         yraw.append(np.full(len(userX[0]), np.argwhere(users==u)[0]))

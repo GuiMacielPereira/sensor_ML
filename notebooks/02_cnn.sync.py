@@ -12,11 +12,18 @@ from peratouch.networks import CNN
 from peratouch.config import path_five_users_main, path_five_users_first
 
 D = Data(path_five_users_main, triggers=True, releases=False)
-D.split()
-D.normalize()
-D.tensors_to_device()
-D.print_shapes()
-# D.plot_data()
+D.shuffle()
+D.halve_raw_data()
+D.make_folds()
+for f in range(5):
+    print("\n\n-- Next Fold --")
+    D.next_fold()
+    # D.split()
+    D.normalize()
+    D.tensors_to_device()
+    D.print_shapes()
+    D.plot_data()
+#%%
 model = CNN(input_ch=1)
 T = Trainer(D)
 T.setup(model, max_epochs=20, batch_size=5000)
