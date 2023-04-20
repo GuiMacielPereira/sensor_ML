@@ -18,7 +18,7 @@ def plot_grid(batch):
         plt.subplot(ny_plots, nx_plots, i+1)
         plt.plot(range(len(sig)), sig, "b.")
         plt.xticks([])
-        plt.ylim(0, batch.max())
+        # plt.ylim(0, batch.max())
         if i%nx_plots: plt.yticks([])
 
 

@@ -6,13 +6,22 @@ import torch.nn as nn
 # Standard model with usual halving of image size and doubling the depth at each conv layer
 class CNN(nn.Module):    
 
-    def __init__(self, input_ch, n_filters=8, n_hidden=256, im_size=32, out_size=5):
-        """input_ch is number of channels in initial image, n_filters is first number of filters."""
+    def __init__(self, n_ch, n_filters=8, im_size=32, out_size=5):
+        """
+        CNN Arquitecture: 3 convolutional layers and 2 linear onesself.
+        Inputs:
+            n_ch: number of input channels (number of triggers)
+            n_filters: number of output channels of first conv layer
+            im_size: size of trigger, 32 by default
+            out_size: number of classes
+        """
         super(CNN, self).__init__()
 
-        k = n_filters
+        k = n_filters   # Rename for convinience
+        flat_size = int(4*k*im_size/8)   # Size after conv layers
+
         self.cnn = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
+            nn.Conv1d(n_ch, k, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm1d(k),
             nn.ReLU(),
             nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
@@ -22,62 +31,20 @@ class CNN(nn.Module):
             nn.BatchNorm1d(4*k),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(4*k * int(im_size/8), n_hidden),    # Size of image 32 is 4
+            nn.Linear(flat_size, flat_size),    # Size of image 32 is 4
             nn.ReLU(),
-            nn.Linear(n_hidden, out_size)
+            nn.Linear(flat_size, out_size)
         )
 
     def forward(self, x):
         return self.cnn(x)
-
-# ------ X-CNN -------
-class X_CNN(nn.Module):    
-
-    def __init__(self, input_ch, n_filters=8, n_hidden=256, im_size=32, out_size=5):
-        """input_ch is number of channels in initial image, n_filters is first number of filters."""
-        super(X_CNN, self).__init__()
-
-        k = n_filters
-        self.first_conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(k),
-            )
-        self.second_conv = nn.Sequential(
-            nn.ReLU(),
-            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(2*k),
-            )
-        self.third_conv = nn.Sequential(
-            nn.ReLU(),
-            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(4*k),
-            )
-        self.linear_layer = nn.Sequential(
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(4*k * int(im_size/8), n_hidden),    # Size of image 32 is 4
-            nn.ReLU(),
-            nn.Linear(n_hidden, out_size)
-        )
-
-    def forward(self, x):
-        return self.linear_layer(self.third_conv(self.second_conv(self.first_conv(x))))
-
-    def first_layer(self, x):
-        return self.first_conv(x)
-
-    def second_layer(self, x):
-        return self.second_conv(x)
-
-    def third_layer(self, x):
-        return self.third_conv(x)
     
 # ------ LSTM --------
 
 # Define standard lstm model
 from torch import manual_seed
 class lstm(nn.Module):
-    def __init__(self, input_size, hidden_size, out_size, global_pool=False, dropout=0):
+    def __init__(self, input_size, hidden_size, out_size=5, global_pool=True):
         super(lstm, self).__init__()
         manual_seed(180200742)    # Set seed for same initialization of weigths each time
         self.global_pool = global_pool
@@ -86,16 +53,18 @@ class lstm(nn.Module):
         self.lstm = nn.LSTM(
                 input_size=input_size, 
                 hidden_size=hidden_size, 
-                num_layers=1, 
                 batch_first=True,
-                dropout=dropout, 
+                num_layers=1, 
+                dropout=0, 
                 bidirectional=False
                 )
         self.fc = nn.Linear(hidden_size, out_size)
-        # self.relu = nn.ReLU()    # Sigmoid did not work well 
+
+        # self.relu = nn.ReLU()    # Sigmoid did not work well
         
-    def forward(self, x):       # TODO: Decide whether to use ReLU()
+    def forward(self, x):      
         x, _ = self.lstm(x) 
+        # x = self.relu(x)      # Seems to slow down training
 
         if self.global_pool:
             x = x.max(dim=1)[0]
@@ -109,14 +78,14 @@ class lstm(nn.Module):
 
 # Standard CNN + LSTM model
 class cnn_lstm(nn.Module):
-    def __init__(self, input_ch=1, n_filters_start=8, hidden_lstm=8, out_size=5, global_pool=False):
+    def __init__(self, n_ch, n_filters=8, hidden_lstm=8, out_size=5, global_pool=True):
         super(cnn_lstm, self).__init__()
         manual_seed(180200742)    # Set seed for same initialization of weigths each time
 
         # Same CNN as before
-        k = n_filters_start
+        k = n_filters
         self.conv = nn.Sequential(    # Convolutional part, 3 layers
-            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
+            nn.Conv1d(n_ch, k, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm1d(k),
             nn.ReLU(),
             nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
@@ -144,6 +113,9 @@ class cnn_lstm(nn.Module):
             return self.fc(x[:, -1, :])         # Select only result from last cell
 
 
+# NOTE: Model below works as well but abandoned it due to worse performance
+# Also it operates on a very different way than conceptually stacking CNN + LSTM
+# Did not find any analog in literature
 # Try out a time-distributed CNN-LSTM model
 class cnn_lstm_time_distributed(nn.Module):
     def __init__(self, input_size, out_size=5, global_pool=False):

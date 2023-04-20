@@ -156,3 +156,47 @@ def group_presses(x, n_elements):
     x = x[: batch_size - (batch_size % n_elements), :, :]  # Discard any final points to match size
     return x.reshape(-1, n_elements, input_size)
 
+
+# Architecture of CNN for producing explainable plots
+
+# ------ X-CNN -------
+class X_CNN(nn.Module):    
+
+    def __init__(self, input_ch, n_filters=8, n_hidden=256, im_size=32, out_size=5):
+        """input_ch is number of channels in initial image, n_filters is first number of filters."""
+        super(X_CNN, self).__init__()
+
+        k = n_filters
+        self.first_conv = nn.Sequential(    # Convolutional part, 3 layers
+            nn.Conv1d(input_ch, k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(k),
+            )
+        self.second_conv = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv1d(k, 2*k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(2*k),
+            )
+        self.third_conv = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv1d(2*k, 4*k, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(4*k),
+            )
+        self.linear_layer = nn.Sequential(
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(4*k * int(im_size/8), n_hidden),    # Size of image 32 is 4
+            nn.ReLU(),
+            nn.Linear(n_hidden, out_size)
+        )
+
+    def forward(self, x):
+        return self.linear_layer(self.third_conv(self.second_conv(self.first_conv(x))))
+
+    def first_layer(self, x):
+        return self.first_conv(x)
+
+    def second_layer(self, x):
+        return self.second_conv(x)
+
+    def third_layer(self, x):
+        return self.third_conv(x)

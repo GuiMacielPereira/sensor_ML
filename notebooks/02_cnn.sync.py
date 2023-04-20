@@ -13,20 +13,18 @@ from peratouch.config import path_five_users_main, path_five_users_first
 
 D = Data(path_five_users_main, triggers=True, releases=False)
 D.split()
-# D.balance_train()
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()
-D.plot_data()
-#%%
-model = CNN(input_ch=1, n_filters=4, n_hidden=128, out_size=5)
+# D.plot_data()
+model = CNN(input_ch=1)
 T = Trainer(D)
 T.setup(model, max_epochs=20, batch_size=5000)
 T.train_model(model)
-T.plot_train()
+# T.plot_train()
 
 R = Results(D, model)
-R.test_metrics(report=True, conf_matrix=True)
+R.test_metrics(report=True, conf_matrix=False)
 R.find_most_uncertain_preds()
 #%%
 # Look at 3 channels
@@ -38,13 +36,12 @@ from peratouch.results import Results
 D = Data(path_five_users_main, triggers=True, releases=False)
 D.group_presses()
 D.split()
-# D.resample_triggers()
 D.normalize()
+# D.resample_triggers()
 D.tensors_to_device()
 D.print_shapes()
-#%%
 # Did not see any improvement by trying out CNN_Dense
-model = CNN(input_ch=3, n_filters=8, n_hidden=256, out_size=5) 
+model = CNN(input_ch=3) 
 T = Trainer(D) 
 T.setup(model,learning_rate=1e-2, weight_decay=1e-3, max_epochs=20, batch_size=5000)
 T.train_model(model)
@@ -53,7 +50,4 @@ T.plot_train()
 R = Results(D, model)
 R.test_metrics(report=True, conf_matrix=True)
 R.find_most_uncertain_preds()
-#%%
-# TODO: To look at some simple transforms, set transforms=True
-# TODO: Look at longer windows of data, maybe width=64
 

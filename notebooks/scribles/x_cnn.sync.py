@@ -8,9 +8,9 @@ from peratouch.data import Data
 from peratouch.trainer import Trainer 
 from peratouch.results import Results 
 from peratouch.networks import X_CNN
-from peratouch.config import datapath_five_users
+from peratouch.config import path_five_users_first 
 
-D = Data(datapath_five_users, triggers=True, releases=False)
+D = Data(path_five_users_first, triggers=True, releases=False)
 D.split()
 # D.balance_train()
 D.normalize()
