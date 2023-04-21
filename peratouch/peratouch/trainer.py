@@ -48,6 +48,7 @@ class Trainer:
         Stores model performance at the end of each epoch. 
         Sets model to lowest validation loss achieved.
         """
+        print("\n Start of training model:\n")
 
         model = model.to(self.Data.device)
         model.apply(weight_init)    # Fixed initialization for reproducibiity
@@ -136,11 +137,11 @@ class Trainer:
 
         plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines)))
 
+        plt.figure()
         if plot_loss:
             plt.plot(self.epochs, self.losses, label=[f"{self.model_name} Train Loss", f"{self.model_name} Val Loss"])
         if plot_acc:
             plt.plot(self.epochs, self.accuracies, label=[f"{self.model_name} Train Acc", f"{self.model_name} Val Acc"])
-
         plt.legend()
         plt.xlabel("Epochs")
         plt.ylim(0, 1)

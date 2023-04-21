@@ -34,12 +34,18 @@ class Results:
         print(f"Overall Accuracy = {self.acc_te()*100:.1f}%, Matthews Corr Coef = {self.matthews_corrcoef_te():.2f}")
         print("\n")
 
-        preds = self.model(self.Data.xte).data.max(1)[-1] 
+        preds, actual = self.get_preds_actual()
+
         if report:
-            print(sklearn.metrics.classification_report(self.Data.yte, preds))
+            print(sklearn.metrics.classification_report(actual, preds))
         if conf_matrix:
             with sns.axes_style('dark'):
                 sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte, preds)
+
+    def get_preds_actual(self):
+        with torch.no_grad():
+            preds = self.model(self.Data.xte).data.max(1)[-1] 
+        return preds, self.Data.yte
 
     # TODO: Function below is working but needs adding labels
     def find_most_uncertain_preds(self):

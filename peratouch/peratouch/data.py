@@ -27,11 +27,12 @@ class Data:
         self.Xraw, _ = np.array_split(self.Xraw, 2)
         self.yraw, _ = np.array_split(self.yraw, 2)
 
-    def make_folds(self, n_folds=5):
+    def make_folds(self, n_folds):
         kf = sklearn.model_selection.KFold(n_splits=n_folds, shuffle=True, random_state=42)
         self.folds_idxs = kf.split(self.Xraw)
 
     def next_fold(self):
+        print("\n\n-- New Fold --")
         train_idx, test_idx = next(self.folds_idxs)
         test_idx, val_idx = np.array_split(test_idx, 2)     # Does not raise error if not equal split
         self.Xtrain, self.Xtest, self.Xval = self.Xraw[train_idx], self.Xraw[test_idx], self.Xraw[val_idx]
