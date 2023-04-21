@@ -4,10 +4,14 @@ from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from peratouch.plot import plot_X
 import sklearn
+from sklearn.model_selection import train_test_split
 
 class Data:
-    def __init__(self, dataPath, triggers=True, releases=False):
-        self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
+    # def __init__(self, dataPath, triggers=True, releases=False):
+    #     self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
+    def __init__(self, Xraw, yraw):
+        self.Xraw = Xraw
+        self.yraw = yraw
 
     def group_presses(self, n_elements=3):
 
@@ -22,21 +26,29 @@ class Data:
     # ------ New functions to run Cross Validation
     def shuffle(self):   # Shuffle presses randomly
         self.Xraw, self.yraw = sklearn.utils.shuffle(self.Xraw, self.yraw, random_state=42)
-
-    def halve_raw_data(self):
-        self.Xraw, _ = np.array_split(self.Xraw, 2)
-        self.yraw, _ = np.array_split(self.yraw, 2)
+    #
+    # def halve_raw_data(self):
+    #     self.Xraw, _ = np.array_split(self.Xraw, 2)
+    #     self.yraw, _ = np.array_split(self.yraw, 2)
 
     def make_folds(self, n_folds):
-        kf = sklearn.model_selection.KFold(n_splits=n_folds, shuffle=True, random_state=42)
+        """Splits dataset into folds without shuffling."""
+        kf = sklearn.model_selection.KFold(n_splits=n_folds) 
         self.folds_idxs = kf.split(self.Xraw)
 
     def next_fold(self):
         print("\n\n-- New Fold --")
         train_idx, test_idx = next(self.folds_idxs)
-        test_idx, val_idx = np.array_split(test_idx, 2)     # Does not raise error if not equal split
-        self.Xtrain, self.Xtest, self.Xval = self.Xraw[train_idx], self.Xraw[test_idx], self.Xraw[val_idx]
-        self.ytrain, self.ytest, self.yval = self.yraw[train_idx], self.yraw[test_idx], self.yraw[val_idx]
+
+        # Spliting below ensures test folds coves entirety of dataset
+        self.Xtest, self.ytest = self.Xraw[test_idx], self.yraw[test_idx]
+        # Now split train fold into train and validation sets
+        self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(self.Xraw[train_idx], self.yraw[train_idx], test_size=0.15, shuffle=False)
+
+        # NOTE: The spliting below of test fold means that test folds do not cover entirety of dataset
+        # test_idx, val_idx = np.array_split(test_idx, 2)     # Does not raise error if not equal split
+        # self.Xtrain, self.Xtest, self.Xval = self.Xraw[train_idx], self.Xraw[test_idx], self.Xraw[val_idx]
+        # self.ytrain, self.ytest, self.yval = self.yraw[train_idx], self.yraw[test_idx], self.yraw[val_idx]
     # -------------------
 
     # def split(self):

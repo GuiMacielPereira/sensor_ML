@@ -3,17 +3,18 @@
 # i.e. includes analysis of training and test accuracies
 
 #%%
-from peratouch.data import Data 
+from peratouch.data import Data, load_data
 from peratouch.trainer import Trainer 
 from peratouch.results import Results 
 from peratouch.networks import CNN
-# from peratouch.config import datapath_five_users
 from peratouch.config import path_five_users_main, path_five_users_first
+import sklearn
 
-D = Data(path_five_users_main, triggers=True, releases=False)
-D.shuffle()
-D.halve_raw_data()
+Xraw, yraw = load_data(path_five_users_main)
+# Shuffle data to destroy ordering of users
+Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw, random_state=42)
 
+D = Data(Xraw, yraw)
 # Create indices of several folds
 n_folds = 5
 D.make_folds(n_folds)     # Makes indices available inside class
@@ -41,22 +42,30 @@ for f in range(n_runs):
     predictions.extend(preds)
     actual_vals.extend(actual)
 
-import sklearn
 print(sklearn.metrics.classification_report(actual_vals, predictions))
 #%%
 # Look at 3 channels
-from peratouch.data import Data 
+from peratouch.data import Data, load_data
 from peratouch.trainer import Trainer  
 from peratouch.networks import CNN 
 from peratouch.config import path_five_users_main, path_five_users_first
 from peratouch.results import Results
-D = Data(path_five_users_main, triggers=True, releases=False)
+import sklearn
+
+Xraw, yraw = load_data(path_five_users_main)
+# Shuffle data to destroy ordering of users
+Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw, random_state=42)
+
+D = Data(Xraw, yraw)
 D.group_presses()
-D.split()
+D.shuffle()
+D.make_folds(5)
+D.next_fold()
 D.normalize()
 # D.resample_triggers()
 D.tensors_to_device()
 D.print_shapes()
+#%%
 # Did not see any improvement by trying out CNN_Dense
 model = CNN(input_ch=3) 
 T = Trainer(D) 
