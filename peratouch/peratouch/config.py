@@ -8,3 +8,6 @@ path_five_users_main = str(data_dir / "processed" / "five_users_main_collection_
 path_five_users_first = str(data_dir / "processed" / "five_users_first_collection_window_32.npz")
 path_three_users_first = str(data_dir / "processed" / "three_users_first_collection_window_32.npz")
 
+# Path to store analysis results 
+path_analysis_results = Path(__file__).parent.parent.parent / "results" / "analysis"
+

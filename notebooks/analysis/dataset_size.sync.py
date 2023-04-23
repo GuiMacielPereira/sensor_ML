@@ -7,17 +7,16 @@ from peratouch.networks import CNN
 from peratouch.config import path_five_users_main, path_five_users_first
 import sklearn
 
-def run_dataset(X, y):
+def run_dataset(X, y, n_folds=5):
     """
     Runs entire routine of fitting CNN model to dataset (X, y)self.
-    Performs Cross-Validation of n_folds.
+    Performs Cross-Validation of n_folds on input dataset.
     Assumes data is already shuffled.
     """
 
     D = Data(X, y)
 
     # Create indices of several folds
-    n_folds = 5               # Run 5 folds for each dataset
     D.make_folds(n_folds)     # Makes indices available inside class
 
     predictions = []
@@ -51,6 +50,8 @@ def run_dataset(X, y):
 # The routine below is a dirty trick using the capabilities of k-fold from sklearn
 # Takes test set from k-fold and uses it to subsample the raw dataset
 # Used it like this because it automates the majority of the work
+from peratouch.config import path_analysis_results
+import numpy as np
 
 Xraw, yraw = load_data(path_five_users_main)
 # Shuffle data to destroy ordering of users
@@ -63,6 +64,7 @@ for n_splits in range(2, 4):         # Splits of raw dataset
     kf = sklearn.model_selection.KFold(n_splits)       # No shuffling
 
     actual_vals, predictions = [], []
+    n_folds = 5      # Number of folds to run for each dataset
 
     for (_, data_idx) in kf.split(Xraw):
         print("\n-- New splitting of dataset --\n")
@@ -70,17 +72,22 @@ for n_splits in range(2, 4):         # Splits of raw dataset
         X = Xraw[data_idx]
         y = yraw[data_idx]
          
-        actual, preds = run_dataset(X, y)
+        actual, preds = run_dataset(X, y, n_folds)
 
         actual_vals.extend(actual)
         predictions.extend(preds)
 
-    # TODO: Change to record len of training dataset, not total dataset
-    results_dict[str(len(X))] = (actual_vals, predictions)
+    # NOTE: Hardcoded value of 0.85 below is the split between training and validation sets
+    tr_size = int(len(X)*(n_folds-1)/n_folds * 0.85)         # Training size is size of all folds except one 
+    results_dict[str(tr_size)] = (actual_vals, predictions)
+    np.savez(str(path_analysis_results / "dataset_size.npz"), **results_dict)
     
 
 #%%
+# Loads data from stored dict
+stored_results = np.load(str(path_analysis_results / "dataset_size.npz"))
+
 print("len of raw data: ", len(Xraw))
-for key in results_dict:
+for key in stored_results:
     print(key, " : ", len(results_dict[key][0]))
     print(sklearn.metrics.classification_report(*results_dict[key]))

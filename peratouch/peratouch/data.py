@@ -13,12 +13,15 @@ class Data:
         self.Xraw = Xraw
         self.yraw = yraw
 
-    def group_presses(self, n_elements=3):
+    def group_presses(self, n_press=3):
+
+        if n_press==1:
+            return     # Skip routine if not grouping presses
 
         def group(x):
             res = []
-            for i in range(len(x) - n_elements):
-                res.append(x[i:i+n_elements, 0, :])
+            for i in range(len(x) - n_press):
+                res.append(x[i:i+n_press, 0, :])
             return np.array(res)
 
         self.Xraw, self.yraw = act_on_user(group, self.Xraw, self.yraw)

@@ -53,8 +53,6 @@ from peratouch.results import Results
 import sklearn
 
 Xraw, yraw = load_data(path_five_users_main)
-# Shuffle data to destroy ordering of users
-Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw, random_state=42)
 
 D = Data(Xraw, yraw)
 D.group_presses()
