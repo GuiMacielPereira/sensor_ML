@@ -60,7 +60,7 @@ D.shuffle()
 D.make_folds(5)
 D.next_fold()
 D.normalize()
-# D.resample_triggers()
+# D.resample_presses()
 D.tensors_to_device()
 D.print_shapes()
 #%%

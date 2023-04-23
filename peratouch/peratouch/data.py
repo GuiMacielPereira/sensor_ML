@@ -121,10 +121,14 @@ class Data:
     # NOTE: This method creates groups of 3 triggers by random resampling over entire dataset
     # Acts on each dataset separately, so test data is still completely separate
     # This provides more information per multiple triggers, and so achieves much higher accuracies
-    def resample_triggers(self, n_channels=3):
+    def resample_presses(self, n_press=3):
+
+        if n_press==1:
+            return
+
         np.random.seed(0)
         def make_combinations(X):
-            return resample_with_replacement(X, n_channels=n_channels, no_combinations=len(X))
+            return resample_with_replacement(X, n_channels=n_press, no_combinations=len(X))
 
         self.Xtrain, self.ytrain = act_on_user(make_combinations, self.Xtrain, self.ytrain)
         self.Xtest, self.ytest = act_on_user(make_combinations, self.Xtest, self.ytest)

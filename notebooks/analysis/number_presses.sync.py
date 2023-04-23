@@ -27,6 +27,7 @@ def run_n_presses(X, y, n_press, n_folds=5):
     # for _ in range(n_folds):     # Run all folds 
     for _ in range(1):     # Run all folds
         D.next_fold()
+        # D.resample_presses(n_press)
         D.normalize()
         D.tensors_to_device()
         D.print_shapes()
