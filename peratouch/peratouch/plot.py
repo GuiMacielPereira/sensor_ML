@@ -51,3 +51,46 @@ def plot_X(X, y):
 
         x += n_points 
     
+# Plots for analysis
+import sklearn
+
+def plot_dataset_sizes(save_path, xlabel='Train dataset size'):
+
+    stored_results = np.load(save_path) 
+
+    x = []
+    y = []
+
+    for key in stored_results:
+        x.append(int(key))
+        actual_vals, preds = stored_results[key]
+        y.append(np.mean(np.array(actual_vals)==np.array(preds)))
+
+    plt.figure()
+    plt.plot(x, y, 'k-x')
+    plt.ylabel('Accuracy')
+    plt.xlabel(xlabel)
+    plt.ylim(0,1)
+    
+
+def plot_presses_users(save_path):
+
+    stored_results = np.load(save_path) 
+
+    user_groups = {}
+
+    for key in stored_results:
+        users, n_p = key.split('_')
+
+        new_key  = f'{len(eval(users))}_{n_p}'
+
+        if new_key not in user_groups:
+            user_groups[new_key] = []
+
+        act_vals, preds = stored_results[key]
+        user_groups[new_key].append(np.mean(act_vals==preds))
+
+    for k in user_groups:
+        print(f'{k} : {user_groups[k]}')
+    
+

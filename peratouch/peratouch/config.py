@@ -11,3 +11,6 @@ path_three_users_first = str(data_dir / "processed" / "three_users_first_collect
 # Path to store analysis results 
 path_analysis_results = Path(__file__).parent.parent.parent / "results" / "analysis"
 
+# Path to figures fom analysis
+path_analysis_figures = Path(__file__).parent.parent.parent / "figures" / "analysis"
+

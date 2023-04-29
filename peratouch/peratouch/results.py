@@ -37,15 +37,15 @@ class Results:
         preds, actual = self.get_preds_actual()
 
         if report:
-            print(sklearn.metrics.classification_report(actual, preds))
+            print(sklearn.metrics.classification_report(actual.cpu(), preds.cpu()))
         if conf_matrix:
             with sns.axes_style('dark'):
-                sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte, preds)
+                sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte.cpu(), preds.cpu())
 
     def get_preds_actual(self):
         with torch.no_grad():
             preds = self.model(self.Data.xte).data.max(1)[-1] 
-        return preds, self.Data.yte
+        return preds.cpu(), self.Data.yte.cpu()
 
     # TODO: Function below is working but needs adding labels
     def find_most_uncertain_preds(self):
@@ -61,11 +61,11 @@ def acc(model, x, y):
     with torch.no_grad():
         out = model(x)
         _, pred = torch.max(out.data, 1)
-        return (pred==y).float().mean()        # Pass bool to float and compute mean, doesn't leave device
+        return (pred==y).float().mean().cpu()        # Pass bool to float and compute mean, doesn't leave device
 
 def matthews_corrcoef(model, x, y):
     with torch.no_grad():
         out = model(x)
         _, pred = torch.max(out.data, 1)      # Tensor in device
-        return sklearn.metrics.matthews_corrcoef(y, pred)    # Works with tensors in device
+        return sklearn.metrics.matthews_corrcoef(y.cpu(), pred.cpu())    # Works with tensors in device
 
