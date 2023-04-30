@@ -28,7 +28,7 @@ for f in range(n_runs):
     D.normalize()
     D.tensors_to_device()
     D.print_shapes()
-    # D.plot_data()
+    D.plot_data()
     model = CNN(n_ch=1)      # Initialize new model each fold
     T = Trainer(D)
     T.setup(model, max_epochs=20, batch_size=int(len(D.xtr)/20))       # 20 minibatches

@@ -6,9 +6,6 @@ from peratouch.data import Data
 from peratouch.results import Results
 # Plotting imports
 from peratouch.plot import plot_trainer
-import matplotlib.pyplot as plt
-import seaborn as sns
-from cycler import cycler
 import time
 
 class Trainer:
@@ -126,6 +123,7 @@ class Trainer:
     def plot_train(self, plot_loss=True, plot_acc=True):
         """ Plot accuracies and losses during training of the model """
         plot_trainer(self.epochs, self.losses, self.accuracies, self.model_name, plot_loss, plot_acc)
+
 
 def weight_init(m):
     """

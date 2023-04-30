@@ -3,6 +3,7 @@ import matplotlib as mpl
 import seaborn as sns
 import numpy as np
 from cycler import cycler
+from peratouch.config import path_analysis_figures, path_figures
 
 sns.set_theme()
 
@@ -36,6 +37,7 @@ def plot_flatten(batch):
 
 # Plot input data X, i.e. user profiles 
 def plot_X(X, y):
+    """Plots mean and std of user triggers"""
     _, n_ch, n_points = X.shape
     n_users = len(np.unique(y))
     plt.figure(figsize=(n_users*3, n_ch*3))
@@ -53,8 +55,12 @@ def plot_X(X, y):
             plt.plot(x, mean, marker='.')
             plt.fill_between(x, mean-std, mean+std, alpha=0.2)
             plt.xticks([])
+        plt.ylabel("Normalised Pressure")
 
         x += n_points 
+
+    filename = 'mean_std_users.pdf'
+    plt.savefig(str(path_figures / filename), bbox_inches='tight')
     
 # Plot for training
 def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_acc=True):
@@ -69,24 +75,29 @@ def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_ac
     colors = [item for sublist in colors for item in sublist]
     lines = [item for sublist in lines for item in sublist]
 
-    plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines)))
+    # plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines))):
+    with mpl.rc_context({'axes.prop_cycle' : f'(cycler(color={colors}) + cycler(linestyle={lines}))'}):
 
-    plt.figure()
-    if plot_loss:
-        plt.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
-    if plot_acc:
-        plt.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
+        plt.figure()
+        if plot_loss:
+            plt.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
+        if plot_acc:
+            plt.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
 
     plt.legend()
     plt.xlabel("Epochs")
     plt.xticks(epochs)
     plt.ylim(top=1)
+    plt.xlim(left=1)
+
+    filename = model_name + '_training.pdf'
+    plt.savefig(str(path_figures / filename), bbox_inches='tight')
 
 # Plots for analysis 
 # Dataset sizes
-def plot_dataset_sizes(save_path, xlabel='Train dataset size'):
+def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
 
-    stored_results = np.load(save_path) 
+    stored_results = np.load(load_path) 
 
     x = []
     y = []
@@ -105,11 +116,14 @@ def plot_dataset_sizes(save_path, xlabel='Train dataset size'):
     plt.xticks(x)
     plt.gca().get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     plt.ylim(0.62,0.72)
+
+    filename = str(load_path).split('/')[-1].split('.')[0] + '.pdf'
+    plt.savefig(str(path_analysis_figures / filename), bbox_inches='tight')
     
 
 # Number of presses AND number of users
-def plot_presses_users(save_path):
-    stored_results = np.load(save_path) 
+def plot_presses_users(load_path):
+    stored_results = np.load(load_path) 
 
     user_groups = {}
 
@@ -146,3 +160,5 @@ def plot_presses_users(save_path):
     plt.xticks([2, 3, 4, 5])
     plt.legend()
 
+    filename = str(load_path).split('/')[-1].split('.')[0] + '.pdf'
+    plt.savefig(str(path_analysis_figures / filename), bbox_inches='tight')
