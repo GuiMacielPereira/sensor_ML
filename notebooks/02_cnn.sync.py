@@ -36,7 +36,7 @@ for f in range(n_runs):
     T.plot_train()
     R = Results(D, model)
     preds, actual = R.get_preds_actual()
-    # R.test_metrics(report=True, conf_matrix=False)
+    R.test_metrics()
     # R.find_most_uncertain_preds()
 
     predictions.extend(preds)

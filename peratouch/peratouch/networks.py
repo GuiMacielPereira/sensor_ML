@@ -43,9 +43,9 @@ class CNN(nn.Module):
 
 # Define standard lstm model
 from torch import manual_seed
-class lstm(nn.Module):
+class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, out_size=5, global_pool=True):
-        super(lstm, self).__init__()
+        super(LSTM, self).__init__()
         manual_seed(180200742)    # Set seed for same initialization of weigths each time
         self.global_pool = global_pool
 
@@ -77,9 +77,9 @@ class lstm(nn.Module):
 # --------- CNN-LSTM -------------
 
 # Standard CNN + LSTM model
-class cnn_lstm(nn.Module):
+class CNN_LSTM(nn.Module):
     def __init__(self, n_ch, n_filters=8, hidden_lstm=8, out_size=5, global_pool=True):
-        super(cnn_lstm, self).__init__()
+        super(CNN_LSTM, self).__init__()
         manual_seed(180200742)    # Set seed for same initialization of weigths each time
 
         # Same CNN as before

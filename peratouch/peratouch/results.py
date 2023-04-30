@@ -34,13 +34,13 @@ class Results:
         print(f"Overall Accuracy = {self.acc_te()*100:.1f}%, Matthews Corr Coef = {self.matthews_corrcoef_te():.2f}")
         print("\n")
 
-        preds, actual = self.get_preds_actual()
+        # preds, actual = self.get_preds_actual()
 
-        if report:
-            print(sklearn.metrics.classification_report(actual.cpu(), preds.cpu()))
-        if conf_matrix:
-            with sns.axes_style('dark'):
-                sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte.cpu(), preds.cpu())
+        # if report:
+        #     print(sklearn.metrics.classification_report(actual.cpu(), preds.cpu()))
+        # if conf_matrix:
+        #     with sns.axes_style('dark'):
+        #         sklearn.metrics.ConfusionMatrixDisplay.from_predictions(self.Data.yte.cpu(), preds.cpu())
 
     def get_preds_actual(self):
         with torch.no_grad():

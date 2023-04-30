@@ -78,17 +78,19 @@ def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_ac
     # plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines))):
     with mpl.rc_context({'axes.prop_cycle' : f'(cycler(color={colors}) + cycler(linestyle={lines}))'}):
 
+        marker = 'D'
         plt.figure()
-        if plot_loss:
-            plt.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
-        if plot_acc:
-            plt.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
 
+        if plot_loss:
+            plt.plot(epochs, losses, marker=marker, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
+        if plot_acc:
+            plt.plot(epochs, accuracies, marker=marker, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
+
+    plt.ylim(top=1)
+    plt.xlim(left=1)
     plt.legend()
     plt.xlabel("Epochs")
     plt.xticks(epochs)
-    plt.ylim(top=1)
-    plt.xlim(left=1)
 
     filename = model_name + '_training.pdf'
     plt.savefig(str(path_figures / filename), bbox_inches='tight')
@@ -109,7 +111,7 @@ def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
 
     plt.figure(figsize=(8, 5))
     plt.plot(x, y, 'k-x', label="n_users=5, n_presses=1", markersize=7)
-    plt.ylabel('Accuracy')
+    plt.ylabel('Accuracy test')
     plt.xlabel(xlabel)
     plt.legend()
     plt.xscale('log')
@@ -156,7 +158,7 @@ def plot_presses_users(load_path):
                 fmt='--D', capsize=4, markersize=5, linewidth=1)
 
     plt.xlabel('Number of users')
-    plt.ylabel('Acccuracy')
+    plt.ylabel('Acccuracy test')
     plt.xticks([2, 3, 4, 5])
     plt.legend()
 

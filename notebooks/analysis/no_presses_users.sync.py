@@ -5,56 +5,15 @@
 # %pip install -e peratouch
 
 #%%
-from peratouch.data import Data, load_data
-from peratouch.trainer import Trainer 
-from peratouch.results import Results 
-from peratouch.networks import CNN
+from peratouch.data import load_data
+from peratouch.routines import run_CNN
 from peratouch.config import path_five_users_main, path_five_users_first
-import sklearn
-import numpy as np
 from datetime import date
+import numpy as np
+import sklearn
 
-def run_n_presses_users(X, y, n_press, n_folds=5, plotting=True):
-    """
-    Runs entire routine of fitting CNN model to dataset (X, y)self.
-    Performs Cross-Validation of n_folds on input dataset.
-    Assumes data is in temporal order, and NOT shuffled.
-    """
-
-    D = Data(X, y)
-
-    n_out = len(np.unique(y))
-
-    D.group_presses(n_press=n_press)
-    D.shuffle()
-
-    # Create indices of several folds
-    D.make_folds(n_folds)     # Makes indices available inside class
-
-    predictions = []
-    actual_vals = []
-
-    for i in range(1):     # Run all folds
-        D.next_fold()
-        # D.resample_presses(n_press)
-        D.normalize()
-        D.tensors_to_device()
-        D.print_shapes()
-        model = CNN(n_ch=n_press, out_size=n_out)      # Initialize new model each fold
-        T = Trainer(D)
-        T.setup(model, max_epochs=30, batch_size=int(len(D.xtr)/20))       # 20 minibatches
-        T.train_model(model)
-        if (plotting & (i==0)):
-            T.plot_train()
-        R = Results(D, model)
-        R.test_metrics()
-        preds, actual = R.get_preds_actual()
-
-        predictions.extend(preds)
-        actual_vals.extend(actual)
-
-    print(sklearn.metrics.classification_report(actual_vals, predictions))
-    return actual_vals, predictions
+def run_n_presses_users(X, y, n_press):
+  return run_CNN(X, y, n_ch=n_press, n_epochs=10, n_folds=5, n_runs=1, plots=False, n_batches=20, random_resampling=False)
 
 #%%
 from peratouch.config import path_analysis_results
@@ -66,6 +25,9 @@ number_users = range(2, 6)
 results_dict = {}
 
 Xraw, yraw = load_data(path_five_users_main)
+
+# # Shuffle data to destroy ordering of users
+# Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw, random_state=42)
 
 for n_users in number_users:     # Number of possible users: 2, 3, 4, 5
 
