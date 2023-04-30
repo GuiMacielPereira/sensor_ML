@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from peratouch.data import Data
 from peratouch.results import Results
 # Plotting imports
+from peratouch.plot import plot_trainer
 import matplotlib.pyplot as plt
 import seaborn as sns
 from cycler import cycler
@@ -124,27 +125,7 @@ class Trainer:
 
     def plot_train(self, plot_loss=True, plot_acc=True):
         """ Plot accuracies and losses during training of the model """
-
-        sns.set_theme()
-        # First, set cycler for colors and linestyles
-        colors = sns.color_palette("husl", 9)
-        # Build repeating colors and linestyles
-        colors = [(c, c) for c in colors]
-        lines = [('--', '-') for c in colors]
-        # Flatten list of sublists
-        colors = [item for sublist in colors for item in sublist]
-        lines = [item for sublist in lines for item in sublist]
-
-        plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines)))
-
-        plt.figure()
-        if plot_loss:
-            plt.plot(self.epochs, self.losses, label=[f"{self.model_name} Train Loss", f"{self.model_name} Val Loss"])
-        if plot_acc:
-            plt.plot(self.epochs, self.accuracies, label=[f"{self.model_name} Train Acc", f"{self.model_name} Val Acc"])
-        plt.legend()
-        plt.xlabel("Epochs")
-        plt.ylim(0, 1)
+        plot_trainer(self.epochs, self.losses, self.accuracies, self.model_name, plot_loss, plot_acc)
 
 def weight_init(m):
     """
