@@ -90,7 +90,7 @@ def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_ac
     plt.xlim(left=1)
     plt.legend()
     plt.xlabel("Epochs")
-    plt.xticks(epochs)
+    # plt.xticks(epochs)
 
     filename = model_name + '_training.pdf'
     plt.savefig(str(path_figures / filename), bbox_inches='tight')

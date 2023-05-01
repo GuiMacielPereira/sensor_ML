@@ -4,18 +4,24 @@
 from peratouch.data import Data 
 from peratouch.trainer import Trainer
 from peratouch.results import Results 
-from peratouch.networks import cnn_lstm
 from peratouch.config import path_five_users_main 
+from peratouch.networks import CNN_LSTM 
+from peratouch.data import load_data
 
-D = Data(path_five_users_main, triggers=True, releases=False)
+n_batches = 15
+Xraw, yraw = load_data(path_five_users_main)
+D = Data(Xraw, yraw)
 D.group_presses()
-D.split()
+D.shuffle()
+# D.split()
+D.make_folds(5)
+D.next_fold()
 D.normalize()
 D.tensors_to_device()
 D.print_shapes()
-model = cnn_lstm(n_ch=3, n_filters=8, hidden_lstm=16) 
+model = CNN_LSTM(n_ch=3) 
 T = Trainer(D)
-T.setup(model, batch_size=5000, max_epochs=20, verbose=True)
+T.setup(model, batch_size=int(len(D.xtr)/n_batches), max_epochs=10, verbose=True)
 T.train_model(model)
 T.plot_train()
 
