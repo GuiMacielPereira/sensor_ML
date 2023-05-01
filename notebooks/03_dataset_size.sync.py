@@ -11,7 +11,8 @@
 from peratouch.data import load_data
 from peratouch.config import path_five_users_main, path_five_users_first
 from peratouch.config import path_analysis_results
-from peratouch.routines import run_CNN
+from peratouch.routines import run_network
+from peratouch.networks import CNN
 from datetime import date
 import numpy as np
 import sklearn
@@ -19,13 +20,14 @@ import sklearn
 n_folds = 5
 
 def run_dataset(X, y):
-    return run_CNN(X, y, n_ch=1, n_epochs=10, n_folds=n_folds, n_runs=1, plots=False, n_batches=20, random_resampling=False)
+    return run_network(CNN, X, y, n_ch=1, n_epochs=100, n_folds=n_folds, n_runs=n_folds, plots=False, n_batches=15, random_resampling=False)
 
 Xraw, yraw = load_data(path_five_users_main)
+Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw)  # Required because dataset will be subsampled!
 
 results_dict = {}
 
-for n_splits in [1, 2, 3, 5, 10, 20, 40]:         # Splits of raw dataset
+for n_splits in [1, 2, 3, 5, 10, 20, 40, 80]:         # Splits of raw dataset
     print("\n\n--- Testing new dataset size ---\n\n")
 
     actual_vals, predictions = [], []

@@ -13,7 +13,7 @@ import numpy as np
 import sklearn
 
 def run_n_presses_users(X, y, n_press):
-  return run_CNN(X, y, n_ch=n_press, n_epochs=10, n_folds=5, n_runs=1, plots=False, n_batches=20, random_resampling=False)
+  return run_CNN(X, y, n_ch=n_press, n_epochs=100, n_folds=5, n_runs=5, plots=False, n_batches=15, random_resampling=False)
 
 #%%
 from peratouch.config import path_analysis_results
@@ -25,9 +25,6 @@ number_users = range(2, 6)
 results_dict = {}
 
 Xraw, yraw = load_data(path_five_users_main)
-
-# # Shuffle data to destroy ordering of users
-# Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw, random_state=42)
 
 for n_users in number_users:     # Number of possible users: 2, 3, 4, 5
 

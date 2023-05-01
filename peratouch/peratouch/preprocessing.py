@@ -76,6 +76,9 @@ class TriggersAndReleases:
             print(f"Included clean triggers: {self.clean_triggers[key].shape}")
             print(f"Included clean releases: {self.clean_releases[key].shape}")
 
+            ratio = (len(self.short_triggers[key]) + len(self.noisy_triggers[key])) / len(self.clean_triggers[key])
+            print(f"Fraction of excluded/included triggers:{ratio:.2f}")
+
     def plot_signal(self, key):
         plot_flatten(self.data[key])
 

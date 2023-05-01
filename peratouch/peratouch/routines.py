@@ -38,6 +38,9 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
         if network.__name__ == 'LSTM':
             D.reshape_for_lstm(input_size=input_size)
 
+        # Balance train set to make all classes equally represented
+        D.balance_train()
+
         D.tensors_to_device()
         D.print_shapes()
 
@@ -63,8 +66,10 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
         predictions.extend(preds)
         actual_vals.extend(actual)
     
-    if plots:
-        print(sklearn.metrics.classification_report(actual_vals, predictions))
+    print(f"Overall accuracy over all folds: {np.mean(np.array(actual_vals)==np.array(predictions))}")
+    print(sklearn.metrics.classification_report(actual_vals, predictions))
+
+    # if plots:
         # TODO: Solve error from running below
         # with sns.axes_style('dark'):
         #     sklearn.metrics.ConfusionMatrixDisplay.from_predictions(actual_vals, predictions)

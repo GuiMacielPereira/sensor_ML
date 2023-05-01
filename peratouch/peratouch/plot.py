@@ -55,7 +55,7 @@ def plot_X(X, y):
             plt.plot(x, mean, marker='.')
             plt.fill_between(x, mean-std, mean+std, alpha=0.2)
             plt.xticks([])
-        plt.ylabel("Normalised Pressure")
+        plt.ylabel("Voltage [V]")
 
         x += n_points 
 
