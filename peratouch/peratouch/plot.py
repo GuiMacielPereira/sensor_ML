@@ -78,13 +78,13 @@ def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_ac
     # plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines))):
     with mpl.rc_context({'axes.prop_cycle' : f'(cycler(color={colors}) + cycler(linestyle={lines}))'}):
 
-        marker = 'D'
+        # marker = 'D'
         plt.figure()
 
         if plot_loss:
-            plt.plot(epochs, losses, marker=marker, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
+            plt.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
         if plot_acc:
-            plt.plot(epochs, accuracies, marker=marker, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
+            plt.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
 
     plt.ylim(top=1)
     plt.xlim(left=1)
