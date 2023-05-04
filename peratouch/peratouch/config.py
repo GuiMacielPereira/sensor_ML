@@ -17,3 +17,5 @@ path_analysis_figures = Path(__file__).parent.parent.parent / "figures" / "analy
 # Path to figures
 path_figures = Path(__file__).parent.parent.parent / "figures" 
 
+# REsults
+path_results = Path(__file__).parent.parent.parent / "results" 

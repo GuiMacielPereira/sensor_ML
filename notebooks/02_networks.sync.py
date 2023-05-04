@@ -13,7 +13,7 @@ from peratouch.config import path_five_users_main, path_five_users_first
 #%%
 from peratouch.networks import CNN
 Xraw, yraw = load_data(path_five_users_main)
-_ = run_network(CNN, Xraw, yraw, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=True, n_batches=15, random_resampling=False)
+_ = run_network(CNN, Xraw, yraw, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=False, n_batches=15, random_resampling=False)
 
 #%%
 from peratouch.networks import LSTM 
@@ -21,6 +21,12 @@ Xraw, yraw = load_data(path_five_users_main)
 _ = run_network(LSTM, Xraw, yraw, input_size=16, hidden_size=16, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=False, n_batches=15, random_resampling=False)
 
 #%%
+from peratouch.networks import CNN_LSTM 
+Xraw, yraw = load_data(path_five_users_main)
+_ = run_network(CNN_LSTM, Xraw, yraw, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=False, n_batches=15, random_resampling=False)
+
+#%%
+# Ran this routine only once for a simple comparison
 ## Run comparison of input sizes of LSTM
 from peratouch.config import path_analysis_results
 from datetime import date
@@ -43,9 +49,3 @@ x = [int(k) for k in data]
 y = [np.mean(vals==preds) for (vals, preds) in data.values()]
 import matplotlib.pyplot as plt 
 plt.plot(x, y)
-
-#%%
-from peratouch.networks import CNN_LSTM 
-Xraw, yraw = load_data(path_five_users_main)
-_ = run_network(CNN_LSTM, Xraw, yraw, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=False, n_batches=15, random_resampling=False)
-

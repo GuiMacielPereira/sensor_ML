@@ -2,8 +2,8 @@
 from peratouch.data import Data, load_data
 from peratouch.trainer import Trainer 
 from peratouch.results import Results 
-# from peratouch.networks import CNN
-# import seaborn as sns
+from peratouch.config import path_results
+from datetime import date
 import sklearn
 import numpy as np
 
@@ -66,8 +66,13 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
         predictions.extend(preds)
         actual_vals.extend(actual)
     
+
     print(f"Overall accuracy over all folds: {np.mean(np.array(actual_vals)==np.array(predictions))}")
     print(sklearn.metrics.classification_report(actual_vals, predictions))
+
+    # Save results
+    filename = str(path_results / f'{network.__name__}_preds_{date.today()}.npz')
+    np.savez(filename, actual_vals=actual_vals, predictions=predictions)
 
     # if plots:
         # TODO: Solve error from running below
