@@ -1,10 +1,9 @@
 #%%
-# Uncomment if running from Google Colab
+# # Uncomment if running from Google Colab
 # from google.colab import drive
 # drive.mount('/content/gdrive', force_remount=True)
 # %cd gdrive/MyDrive/Masters_Project
 # %pip install -e peratouch
-
 #%%
 # Run CNN routine for datasets with different sizes
 # Goal is to analyse how dataset size affects performance
@@ -23,11 +22,11 @@ def run_dataset(X, y):
     return run_network(CNN, X, y, n_ch=1, n_epochs=100, n_folds=n_folds, n_runs=n_folds, plots=False, n_batches=15, random_resampling=False)
 
 Xraw, yraw = load_data(path_five_users_main)
-Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw)  # Required because dataset will be subsampled!
+Xraw, yraw = sklearn.utils.shuffle(Xraw, yraw)
 
 results_dict = {}
 
-for n_splits in [1, 2, 3, 5, 10, 20, 40, 80]:         # Splits of raw dataset
+for n_splits in [80, 40, 20, 10, 5, 4, 3, 2, 1]:         # Splits of raw dataset
     print("\n\n--- Testing new dataset size ---\n\n")
 
     actual_vals, predictions = [], []
@@ -67,3 +66,4 @@ print("len of raw data: ", len(Xraw))
 for key in stored_results:
     print(key, " : ", len(results_dict[key][0]))
     print(sklearn.metrics.classification_report(*results_dict[key]))
+

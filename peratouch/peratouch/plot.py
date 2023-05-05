@@ -109,13 +109,14 @@ def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
         actual_vals, preds = stored_results[key]
         y.append(np.mean(np.array(actual_vals)==np.array(preds)))
 
-    plt.figure(figsize=(8, 5))
-    plt.plot(x, y, 'k-x', label="n_users=5, n_presses=1", markersize=7)
+    plt.figure(figsize=(8, 4))
+    plt.plot(x, y, 'k-x', label="n_users=5, n_presses=1", markersize=10)
     plt.ylabel('Accuracy test')
     plt.xlabel(xlabel)
     plt.legend()
-    plt.xscale('log')
-    plt.xticks(x)
+    # plt.xscale('log')
+    xticks = x.pop(1)
+    plt.xticks(x, rotation=45)
     plt.gca().get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     plt.ylim(0.62,0.72)
 

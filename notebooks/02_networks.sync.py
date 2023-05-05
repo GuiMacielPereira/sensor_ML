@@ -26,26 +26,27 @@ Xraw, yraw = load_data(path_five_users_main)
 _ = run_network(CNN_LSTM, Xraw, yraw, n_ch=1, n_epochs=100, n_folds=10, n_runs=10, plots=False, n_batches=15, random_resampling=False)
 
 #%%
-# Ran this routine only once for a simple comparison
-## Run comparison of input sizes of LSTM
-from peratouch.config import path_analysis_results
-from datetime import date
-from peratouch.networks import LSTM 
-import numpy as np
+# # Ran this routine only once for a simple comparison
+# ## Run comparison of input sizes of LSTM
+# from peratouch.config import path_analysis_results
+# from datetime import date
+# from peratouch.networks import LSTM 
+# import numpy as np
 
-Xraw, yraw = load_data(path_five_users_main)
+# Xraw, yraw = load_data(path_five_users_main)
 
-input_sizes = [1, 2, 4, 8, 16, 32]
-results = {}
-for in_size in input_sizes:
-    print('----- input size = ', in_size, "\n")
-    results[str(in_size)] = run_network(LSTM, Xraw, yraw, input_size=in_size, hidden_size=16, n_ch=1, n_epochs=50, n_folds=5, n_runs=5, plots=False, n_batches=15, random_resampling=False)
+# input_sizes = [1, 2, 4, 8, 16, 32]
+# results = {}
+# for in_size in input_sizes:
+#     print('----- input size = ', in_size, "\n")
+#     results[str(in_size)] = run_network(LSTM, Xraw, yraw, input_size=in_size, hidden_size=16, n_ch=1, n_epochs=50, n_folds=5, n_runs=5, plots=False, n_batches=15, random_resampling=False)
 
-save_path = str(path_analysis_results/f'input_size_lstm_{date.today()}.npz')
-np.savez(save_path, **results)
+# save_path = str(path_analysis_results/f'input_size_lstm_{date.today()}.npz')
+# np.savez(save_path, **results)
 
-data = np.load(save_path)
-x = [int(k) for k in data]
-y = [np.mean(vals==preds) for (vals, preds) in data.values()]
-import matplotlib.pyplot as plt 
-plt.plot(x, y)
+# data = np.load(save_path)
+# x = [int(k) for k in data]
+# y = [np.mean(vals==preds) for (vals, preds) in data.values()]
+# import matplotlib.pyplot as plt 
+# plt.plot(x, y)
+

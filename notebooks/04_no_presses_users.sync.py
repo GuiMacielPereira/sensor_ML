@@ -6,21 +6,22 @@
 
 #%%
 from peratouch.data import load_data
-from peratouch.routines import run_CNN
+from peratouch.routines import run_network
 from peratouch.config import path_five_users_main, path_five_users_first
 from datetime import date
+from peratouch.networks import CNN
 import numpy as np
 import sklearn
 
 def run_n_presses_users(X, y, n_press):
-  return run_CNN(X, y, n_ch=n_press, n_epochs=100, n_folds=5, n_runs=5, plots=False, n_batches=15, random_resampling=False)
+  return run_network(CNN, X, y, n_ch=n_press, n_epochs=100, n_folds=5, n_runs=5, plots=False, n_batches=15, random_resampling=False)
 
 #%%
 from peratouch.config import path_analysis_results
 import itertools
 
 number_presses = [1, 3, 5, 10, 20]
-number_users = range(2, 6)
+number_users = range(3, 6)
 
 results_dict = {}
 
@@ -46,7 +47,7 @@ for n_users in number_users:     # Number of possible users: 2, 3, 4, 5
             results_dict[f'{users}_{n_press}'] = run_n_presses_users(X, y, n_press)
 
             np.savez(str(path_analysis_results / f"no_presses_users_{date.today()}.npz"), **results_dict)
-        
+
 #%%
 stored_results = np.load(str(path_analysis_results / f"no_presses_users_{date.today()}.npz"))
 

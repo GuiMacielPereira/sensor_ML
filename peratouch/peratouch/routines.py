@@ -68,7 +68,7 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
     
 
     print(f"Overall accuracy over all folds: {np.mean(np.array(actual_vals)==np.array(predictions))}")
-    print(sklearn.metrics.classification_report(actual_vals, predictions))
+    print(sklearn.metrics.classification_report(actual_vals, predictions, digits=3))
 
     # Save results
     filename = str(path_results / f'{network.__name__}_preds_{date.today()}.npz')
