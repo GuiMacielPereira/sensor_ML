@@ -22,27 +22,25 @@ D.make_folds(n_folds)     # Makes indices available inside class
 predictions = []
 actual_vals = []
 
-n_runs = 1
-for f in range(n_runs):
-    D.next_fold()
-    D.normalize()
-    D.tensors_to_device()
-    D.print_shapes()
-    D.plot_data()
-    model = CNN(n_ch=1)      # Initialize new model each fold
-    T = Trainer(D)
-    T.setup(model, max_epochs=20, batch_size=int(len(D.xtr)/20))       # 20 minibatches
-    T.train_model(model)
-    T.plot_train()
-    R = Results(D, model)
-    preds, actual = R.get_preds_actual()
-    R.test_metrics()
-    # R.find_most_uncertain_preds()
+D.next_fold()
+D.normalize()
+D.tensors_to_device()
+D.print_shapes()
+D.plot_data()
+model = CNN(n_ch=1)      # Initialize new model each fold
+T = Trainer(D)
+T.setup(model, max_epochs=3, batch_size=int(len(D.xtr)/20))       # 20 minibatches
+T.train_model(model)
+T.plot_train()
+# R = Results(D, model)
+# preds, actual = R.get_preds_actual()
+# R.test_metrics()
+# R.find_most_uncertain_preds()
 
-    predictions.extend(preds)
-    actual_vals.extend(actual)
-
-print(sklearn.metrics.classification_report(actual_vals, predictions))
+# predictions.extend(preds)
+# actual_vals.extend(actual)
+#
+# print(sklearn.metrics.classification_report(actual_vals, predictions))
 #%%
 # Look at 3 channels
 from peratouch.data import Data, load_data

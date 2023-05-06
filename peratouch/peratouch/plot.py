@@ -6,6 +6,8 @@ from cycler import cycler
 from peratouch.config import path_analysis_figures, path_figures
 
 sns.set_theme()
+# sns.set_context('talk')
+# sns.set_palette('dark')
 
 # Plot grid of triggers
 def plot_grid(batch):
@@ -66,36 +68,76 @@ def plot_X(X, y):
 def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_acc=True):
     """ Plot accuracies and losses during training of the model """
 
-    # First, set cycler for colors and linestyles
-    colors = sns.color_palette("husl", 9)
-    # Build repeating colors and linestyles
-    colors = [(c, c) for c in colors]
-    lines = [('--', '-') for c in colors]
-    # Flatten list of sublists
-    colors = [item for sublist in colors for item in sublist]
-    lines = [item for sublist in lines for item in sublist]
+    colors = ['limegreen', 'darkgreen', 'deepskyblue', 'darkblue']
 
-    # plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', lines))):
-    with mpl.rc_context({'axes.prop_cycle' : f'(cycler(color={colors}) + cycler(linestyle={lines}))'}):
+    with sns.axes_style('dark'):
+        with mpl.rc_context({'axes.prop_cycle' : f'(cycler(color={colors}))'}):
 
-        # marker = 'D'
-        plt.figure()
+            # marker = 'D'
+            fig, ax0 = plt.subplots()
+            ax1 = ax0.twinx()
 
-        if plot_loss:
-            plt.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
-        if plot_acc:
-            plt.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
+            ax1.plot(epochs, losses, label=[f"{model_name} Train Loss", f"{model_name} Val Loss"])
+            next(ax0._get_lines.prop_cycler)
+            next(ax0._get_lines.prop_cycler)
+            ax0.plot(epochs, accuracies, label=[f"{model_name} Train Acc", f"{model_name} Val Acc"])
+            # ax0.set_ylim(top=1)
 
-    plt.ylim(top=1)
-    plt.xlim(left=1)
-    plt.legend()
-    plt.xlabel("Epochs")
-    # plt.xticks(epochs)
+            ax0.legend(bbox_to_anchor=(0.45, 1.17))
+            ax1.legend(bbox_to_anchor=(0.97, 1.17))
+
+            ax0.set_ylabel('Accuracy', color="blue")
+            ax0.tick_params(axis='y', colors='blue')
+            ax0.set_ylim(0.3, 0.75)
+
+            ax1.set_ylabel('Loss', color="green")
+            ax1.tick_params(axis='y', colors='green')
+            ax1.set_ylim(0.7, 1.4)
+
+            ax0.set_xlabel('Epochs')
+            # ax0.set_xticks([1]+list(ax0.get_xticks()))
+            ax0.set_xlim(left=1)
 
     filename = model_name + '_training.pdf'
     plt.savefig(str(path_figures / filename), bbox_inches='tight')
 
 # Plots for analysis 
+
+# LSTM architecture
+def plot_lstm_sizes(load_path):
+    stored_results = np.load(load_path) 
+
+    acc_results = {}
+    for k in stored_results:
+        v, p = stored_results[k]
+        acc_results[k] = np.mean(v==p)
+
+    # # Find range of number of presses
+    # hidden_range = np.unique([key.split('_')[-1] for key in stored_results])
+    #
+    # # Sort by increasing press
+    # hidden_range = [int(s) for s in hidden_range]    # Pass to ints
+    # hidden_range.sort() 
+    # hidden_range = [str(i) for i in hidden_range]    # Pass to stings again
+
+    plt.figure(figsize=(7,6))
+
+    for hid_size in ['8', '16', '32']:
+        x = [int(key.split('_')[0]) for key in stored_results if key.split('_')[-1]==hid_size]
+        y = [acc_results[key] for key in stored_results if key.split('_')[-1]==hid_size]
+        plt.plot(x, y, '--^',  label=f'LSTM cell output={hid_size}', 
+                markersize=6, linewidth=1.5)
+
+    plt.xlabel('Input size LSTM cell')
+    plt.ylabel('Test Acccuracy')
+    plt.xscale('log')
+    plt.xticks([1, 2, 4, 8, 16, 32])
+    plt.gca().get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    plt.legend()
+
+    filename = str(load_path).split('/')[-1].split('.')[0] + '.pdf'
+    plt.savefig(str(path_analysis_figures / filename), bbox_inches='tight')
+
 # Dataset sizes
 def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
 
@@ -109,7 +151,7 @@ def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
         actual_vals, preds = stored_results[key]
         y.append(np.mean(np.array(actual_vals)==np.array(preds)))
 
-    plt.figure(figsize=(8, 4))
+    plt.figure(figsize=(7, 6))
     plt.plot(x, y, 'k-x', label="n_users=5, n_presses=1", markersize=10)
     plt.ylabel('Accuracy test')
     plt.xlabel(xlabel)
@@ -149,17 +191,17 @@ def plot_presses_users(load_path):
     n_presses.sort() 
     n_presses = [str(i) for i in n_presses]    # Pass to stings again
 
-    plt.figure(figsize=(8,5))
+    plt.figure(figsize=(7,6))
 
     for n_p in n_presses:
         x = [int(key.split('_')[0]) for key in user_groups if key.split('_')[-1]==n_p]
         y = [np.mean(user_groups[key]) for key in user_groups if key.split('_')[-1]==n_p]
         e = [np.std(user_groups[key]) for key in user_groups if key.split('_')[-1]==n_p]
         plt.errorbar(x, y, e, label=f'n_presses={n_p}', 
-                fmt='--D', capsize=4, markersize=5, linewidth=1)
+                fmt='--D', capsize=4, markersize=6, linewidth=1.5)
 
     plt.xlabel('Number of users')
-    plt.ylabel('Acccuracy test')
+    plt.ylabel('Test Acccuracy')
     plt.xticks([2, 3, 4, 5])
     plt.legend()
 
