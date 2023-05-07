@@ -80,7 +80,7 @@ class TriggersAndReleases:
             print(f"Fraction of excluded/included triggers:{ratio:.2f}")
 
     def plot_signal(self, key):
-        plot_flatten(self.data[key])
+        plot_flatten(self.data[key])    # Created sample for figures [53000:55000]
 
     def plot_clean(self, key):
         plot_grid(self.clean_triggers[key])

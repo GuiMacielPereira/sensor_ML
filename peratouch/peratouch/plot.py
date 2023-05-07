@@ -3,19 +3,20 @@ import matplotlib as mpl
 import seaborn as sns
 import numpy as np
 from cycler import cycler
+import itertools
 from peratouch.config import path_analysis_figures, path_figures
 
 sns.set_theme()
 # sns.set_context('talk')
-# sns.set_palette('dark')
+sns.set_palette('husl')
 
 # Plot grid of triggers
 def plot_grid(batch):
     batch = batch.reshape(batch.shape[0], -1)
     if len(batch) > 50:   # Cut batch short if required
-        batch = batch[:30]
+        batch = batch[:36]
 
-    nx_plots = 10
+    nx_plots = 6 
     ny_plots = int(np.ceil(len(batch) / nx_plots))
     
     plt.figure(figsize=(nx_plots*2, ny_plots*2))
@@ -24,18 +25,25 @@ def plot_grid(batch):
         plt.subplot(ny_plots, nx_plots, i+1)
         plt.plot(range(len(sig)), sig, "b.")
         plt.xticks([])
-        # plt.ylim(0, batch.max())
+        plt.ylim(0, batch.max())
         if i%nx_plots: plt.yticks([])
 
+    filename = 'triggers_grid.pdf'
+    plt.savefig(str(path_figures / filename), bbox_inches='tight')
 
 # Concatenate triggers and plot continuously
 def plot_flatten(batch):
     points = batch.flatten()
     if points.size==0: return 
-    plt.figure(figsize=(30, 5))
+    plt.figure(figsize=(15, 3))
     plt.tight_layout()
     plt.plot(range(len(points)), points, "b.")
 
+    plt.ylabel('Voltage[V]')
+    plt.xlabel('Number of points')
+
+    # filename = 'flat_signal.pdf'
+    # plt.savefig(str(path_figures / filename), bbox_inches='tight')
 
 # Plot input data X, i.e. user profiles 
 def plot_X(X, y):
@@ -112,21 +120,15 @@ def plot_lstm_sizes(load_path):
         v, p = stored_results[k]
         acc_results[k] = np.mean(v==p)
 
-    # # Find range of number of presses
-    # hidden_range = np.unique([key.split('_')[-1] for key in stored_results])
-    #
-    # # Sort by increasing press
-    # hidden_range = [int(s) for s in hidden_range]    # Pass to ints
-    # hidden_range.sort() 
-    # hidden_range = [str(i) for i in hidden_range]    # Pass to stings again
-
     plt.figure(figsize=(7,6))
+
+    markers = itertools.cycle(('^', 'o', 's', 'D'))
 
     for hid_size in ['8', '16', '32']:
         x = [int(key.split('_')[0]) for key in stored_results if key.split('_')[-1]==hid_size]
         y = [acc_results[key] for key in stored_results if key.split('_')[-1]==hid_size]
-        plt.plot(x, y, '--^',  label=f'LSTM cell output={hid_size}', 
-                markersize=6, linewidth=1.5)
+        plt.plot(x, y, ':',  label=f'LSTM cell output={hid_size}', 
+                marker=next(markers), markersize=7, linewidth=2)
 
     plt.xlabel('Input size LSTM cell')
     plt.ylabel('Test Acccuracy')
