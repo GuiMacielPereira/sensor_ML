@@ -84,7 +84,7 @@ class TriggersAndReleases:
 
     def plot_clean(self, key):
         plot_grid(self.clean_triggers[key])
-        plot_grid(self.clean_releases[key])
+        plot_grid(self.clean_releases[key])     
         # TODO: Find an interactive way to look at data on notebook
 
     def plot_discarded(self, key):
@@ -93,7 +93,7 @@ class TriggersAndReleases:
 
     def plot_means_std(self):
         plot_X(*dict_to_X_y(self.clean_triggers))
-        plot_X(*dict_to_X_y(self.clean_releases))
+        plot_X(*dict_to_X_y(self.clean_releases))   
 
     def get_triggers(self):
         return self.clean_triggers

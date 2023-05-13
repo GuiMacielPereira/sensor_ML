@@ -8,7 +8,7 @@ from peratouch.config import path_analysis_figures, path_figures
 
 sns.set_theme()
 # sns.set_context('talk')
-sns.set_palette('husl')
+# sns.set_palette('husl')
 
 # Plot grid of triggers
 def plot_grid(batch):
@@ -23,10 +23,14 @@ def plot_grid(batch):
     plt.tight_layout()
     for i, sig in enumerate(batch):
         plt.subplot(ny_plots, nx_plots, i+1)
+        plt.ylim(-0.3, 1.03*batch.max())
         plt.plot(range(len(sig)), sig, "b.")
         plt.xticks([])
-        plt.ylim(0, batch.max())
-        if i%nx_plots: plt.yticks([])
+        if i%nx_plots: 
+            plt.yticks([])
+        else:
+            plt.ylabel('Voltage [V]')
+        plt.grid(False)
 
     filename = 'triggers_grid.pdf'
     plt.savefig(str(path_figures / filename), bbox_inches='tight')
@@ -51,7 +55,7 @@ def plot_X(X, y):
     _, n_ch, n_points = X.shape
     n_users = len(np.unique(y))
     plt.figure(figsize=(n_users*3, n_ch*3))
-    plt.suptitle("Mean and std of signals for users and channels")
+    # plt.suptitle("Mean and std of signals for users and channels")
     plt.tight_layout()
 
     x = np.arange(n_points)
