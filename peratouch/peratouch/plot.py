@@ -77,7 +77,7 @@ def plot_X(X, y):
     plt.savefig(str(path_figures / filename), bbox_inches='tight')
     
 # Plot for training
-def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_acc=True):
+def plot_trainer(epochs, losses, accuracies, model_name, save_path):
     """ Plot accuracies and losses during training of the model """
 
     colors = ['limegreen', 'darkgreen', 'deepskyblue', 'darkblue']
@@ -100,18 +100,24 @@ def plot_trainer(epochs, losses, accuracies, model_name, plot_loss=True, plot_ac
 
             ax0.set_ylabel('Accuracy', color="blue")
             ax0.tick_params(axis='y', colors='blue')
-            ax0.set_ylim(0.3, 0.75)
+            # ax0.set_ylim(0.3, 0.75)
+            # ax0.set_ylim(0.4*np.max(accuracies), 1.05*np.max(accuracies))
+            ax0.set_ylim(bottom=0.7*np.min(accuracies))
 
             ax1.set_ylabel('Loss', color="green")
             ax1.tick_params(axis='y', colors='green')
-            ax1.set_ylim(0.7, 1.4)
+            # ax1.set_ylim(0.7, 1.4)
+            # ax1.set_ylim(0.90*np.min(losses), 2*np.min(losses))
+            ax1.set_ylim(top=1.4*np.max(losses))
 
             ax0.set_xlabel('Epochs')
             # ax0.set_xticks([1]+list(ax0.get_xticks()))
             ax0.set_xlim(left=1)
 
-    filename = model_name + '_training.pdf'
-    plt.savefig(str(path_figures / filename), bbox_inches='tight')
+    if save_path != None:
+        # filename = model_name + '_training.pdf'
+        # plt.savefig(str(path_figures / filename), bbox_inches='tight')
+        plt.savefig(save_path, bbox_inches='tight')
 
 # Plots for analysis 
 

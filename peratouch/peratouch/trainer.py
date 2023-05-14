@@ -120,9 +120,9 @@ class Trainer:
             self.times.append(time.time() - self.t)
             self.t = time.time()
 
-    def plot_train(self, plot_loss=True, plot_acc=True):
+    def plot_train(self, save_path=None):
         """ Plot accuracies and losses during training of the model """
-        plot_trainer(self.epochs, self.losses, self.accuracies, self.model_name, plot_loss, plot_acc)
+        plot_trainer(self.epochs, self.losses, self.accuracies, self.model_name, save_path)
 
 
 def weight_init(m):

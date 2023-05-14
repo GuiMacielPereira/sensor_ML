@@ -2,7 +2,7 @@
 from peratouch.data import Data, load_data
 from peratouch.trainer import Trainer 
 from peratouch.results import Results 
-from peratouch.config import path_results
+from peratouch.config import path_results, path_figures
 from datetime import date
 import sklearn
 import numpy as np
@@ -70,9 +70,19 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
     print(f"Overall accuracy over all folds: {np.mean(np.array(actual_vals)==np.array(predictions))}")
     print(sklearn.metrics.classification_report(actual_vals, predictions, digits=3))
 
-    # Save results
-    filename = str(path_results / f'{network.__name__}_preds_{date.today()}.npz')
+    # Save results for predictions of all folds 
+    path = build_path_to_dirs(path_results, n_ch, random_resampling)
+    path.mkdir(exist_ok=True)
+    filename = str(path / f'{network.__name__}_preds_{date.today()}.npz')
     np.savez(filename, actual_vals=actual_vals, predictions=predictions)
+    print(f'Saved predictions in {filename}')
+
+    #Save plot of training for last fold
+    path = build_path_to_dirs(path_figures, n_ch, random_resampling)
+    path.mkdir(exist_ok=True)
+    filename = str(path / f'{network.__name__}_training_{date.today()}.pdf')
+    T.plot_train(save_path=filename)
+    print(f'Saved plot in {filename}')
 
     # if plots:
         # TODO: Solve error from running below
@@ -80,4 +90,15 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
         #     sklearn.metrics.ConfusionMatrixDisplay.from_predictions(actual_vals, predictions)
 
     return actual_vals, predictions 
+
+
+def build_path_to_dirs(path_to_dirs, n_ch, random_resampling):
+    """Builds results or figures directories"""
+    path = path_to_dirs / 'n_press_1'
+    if n_ch>1:
+        if random_resampling:
+            path = path_to_dirs / f'n_press_{n_ch}_resampled'
+        else:
+            path = path_to_dirs / f'n_press_{n_ch}_consecutive'
+    return path
 
