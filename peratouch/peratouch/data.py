@@ -20,7 +20,7 @@ class Data:
 
         def group(x):
             res = []
-            for i in range(len(x) - n_press):
+            for i in range(0, len(x) - n_press, n_press):
                 res.append(x[i:i+n_press, 0, :])
             return np.array(res)
 

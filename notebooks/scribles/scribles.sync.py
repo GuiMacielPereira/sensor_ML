@@ -104,3 +104,7 @@ colors = [item for sublist in colors for item in sublist]
 lines = [item for sublist in lines for item in sublist]
 print(colors)
 print(lines)
+
+#%%
+for i in range(0, 30, 3):
+    print(i)
