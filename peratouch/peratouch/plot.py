@@ -137,10 +137,10 @@ def plot_lstm_sizes(load_path):
     for hid_size in ['8', '16', '32']:
         x = [int(key.split('_')[0]) for key in stored_results if key.split('_')[-1]==hid_size]
         y = [acc_results[key] for key in stored_results if key.split('_')[-1]==hid_size]
-        plt.plot(x, y, ':',  label=f'LSTM cell output={hid_size}', 
+        plt.plot(x, y, ':',  label=f'LSTM hidden size={hid_size}', 
                 marker=next(markers), markersize=7, linewidth=2)
 
-    plt.xlabel('Input size LSTM cell')
+    plt.xlabel('Input size of LSTM cell')
     plt.ylabel('Test Acccuracy')
     plt.xscale('log')
     plt.xticks([1, 2, 4, 8, 16, 32])
@@ -165,7 +165,7 @@ def plot_dataset_sizes(load_path, xlabel='Train dataset size'):
 
     plt.figure(figsize=(7, 6))
     plt.plot(x, y, 'k-x', label="n_users=5, n_presses=1", markersize=10)
-    plt.ylabel('Accuracy test')
+    plt.ylabel('Test Accuracy')
     plt.xlabel(xlabel)
     plt.legend()
     # plt.xscale('log')
