@@ -20,9 +20,6 @@ class Trainer:
 
         self.max_epochs = max_epochs
         # Build data loader to seperate data into batches
-        # n_batches = 10    # Number of minibatches to train
-        # batch_size = int(len(self.Data.trainset)/n_batches)
-        # print("Batch size:", batch_size)
         self.train_loader = DataLoader(self.Data.trainset, batch_size=batch_size, shuffle=True)
         # Use same criterion for all models
         self.criterion = torch.nn.CrossEntropyLoss()

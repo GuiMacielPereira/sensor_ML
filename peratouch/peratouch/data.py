@@ -19,7 +19,9 @@ class Data:
 
         def group(x):
             res = []
-            for i in range(0, len(x) - n_press, n_press):
+            # There is a better way to make groups of consecutive presses
+            # This was a quick modification to the previous procedure of a rolling window 
+            for i in range(0, len(x) - n_press, n_press):   
                 res.append(x[i:i+n_press, 0, :])
             return np.array(res)
 
