@@ -2,3 +2,5 @@
 __pycache__/
 data/raw_npz/five_users*.npz
 data/processed/five_users*.npz
+build/
+peratouch.egg-info/
