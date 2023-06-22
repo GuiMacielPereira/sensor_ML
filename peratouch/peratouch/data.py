@@ -7,8 +7,7 @@ import sklearn
 from sklearn.model_selection import train_test_split
 
 class Data:
-    # def __init__(self, dataPath, triggers=True, releases=False):
-    #     self.Xraw, self.yraw = load_data(dataPath, triggers, releases)
+
     def __init__(self, Xraw, yraw):
         self.Xraw = Xraw
         self.yraw = yraw
@@ -26,16 +25,19 @@ class Data:
 
         self.Xraw, self.yraw = act_on_user(group, self.Xraw, self.yraw)
 
-    # ------ New functions to run Cross Validation
     def shuffle(self):   # Shuffle presses randomly
         self.Xraw, self.yraw = sklearn.utils.shuffle(self.Xraw, self.yraw, random_state=42)
 
     def make_folds(self, n_folds):
         """Splits dataset into folds without shuffling."""
+        if n_folds < 2:
+            raise ValueError("Need to have at least two folds (50% test size). To avoid running all folds in cross validation, use n_runs parameter.")
+
         kf = sklearn.model_selection.KFold(n_splits=n_folds) 
         self.folds_idxs = kf.split(self.Xraw)
 
     def next_fold(self):
+        """Selects next fold from pre-determined folds"""
         print("\n\n-- New Fold --")
         train_idx, test_idx = next(self.folds_idxs)
 
@@ -44,29 +46,12 @@ class Data:
         # Now split train fold into train and validation sets
         self.Xtrain, self.Xval, self.ytrain, self.yval = train_test_split(self.Xraw[train_idx], self.yraw[train_idx], test_size=0.15, shuffle=False)
 
-
-    # def split(self):
-    #     self.Xtrain, Xtest, self.ytrain, ytest = train_test_split(self.Xraw, self.yraw, test_size=0.20, random_state=42)
-    #     self.Xtest, self.Xval, self.ytest, self.yval = train_test_split(Xtest, ytest, test_size=0.50, random_state=42)
-
     def balance_train(self): 
         # For some weird reason, resampler takes only up to 2 dims, so need to do some reshaping tricks
         batch_size, n_ch, in_size = self.Xtrain.shape
         Xtrain = self.Xtrain.reshape(batch_size, -1)
         Xtrain, self.ytrain = RandomOverSampler(random_state=42).fit_resample(Xtrain, self.ytrain)
         self.Xtrain = Xtrain.reshape(-1, n_ch, in_size)
-
-    # # NOTE: Tried this function, much worse accuracy
-    # # Destroyes consecutive presses by random sampling on train dataset
-    # def shuffle_presses_train(self):
-    #
-    #     def shuffle(x):
-    #         batch_size, _, input_size = x.shape
-    #         x = x.reshape(-1, input_size)
-    #         x = sklearn.utils.shuffle(x)
-    #         return x.reshape(batch_size, -1, input_size)
-    #
-    #     self.Xtrain, self.ytrain = act_on_user(shuffle, self.Xtrain, self.ytrain)
 
     def normalize(self, verbose=True):
         """Normalise datasets according to fixed value from train set"""
@@ -184,8 +169,7 @@ def resample_with_replacement(X, n_channels, no_combinations):
 
 
 # Loading function 
-def load_data(dataPath, triggers=True, releases=False):
-    assert (triggers or releases), "At least one of triggers or releases need to be set to True!"
+def load_data(dataPath):
     data = np.load(dataPath)
 
     # Check different users
@@ -198,11 +182,7 @@ def load_data(dataPath, triggers=True, releases=False):
 
         userX = []
 
-        if triggers:
-            userX.append(data[u+"_triggers"])
-            # NOTE: Some transforms were tried at this point but were abandoned.
-        if releases:
-            userX.append(data[u+"_releases"])
+        userX.append(data[u+"_triggers"])
         
         Xraw.append(np.stack(userX, axis=1))
         yraw.append(np.full(len(userX[0]), np.argwhere(users==u)[0]))

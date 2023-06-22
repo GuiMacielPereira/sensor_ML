@@ -11,6 +11,17 @@ def run_network(network, Xraw, yraw, n_ch=1, n_epochs=20, n_folds=5, n_runs=5,
         plots=True, n_batches=20, random_resampling=False, input_size=4, hidden_size=8):
     """
     This humoungous and complicated funciton defines the routine based on input parameters.
+
+    The arguments of this function are the following:
+    n_ch: No of channels, same as number of triggers to consider
+    n_epochs: No of epochs for training
+    n_folds: Sets fraction of test set. 10 folds corresponds to size of 10%
+    n_runs: Number of folds to run in cross validation
+    plots: Turn on and off showing plots
+    n_batches: Number of batches to use in training
+    random_resampling: False for consecutive presses, True for randomly chosen presses
+    input_size: Only for LSTM routines, size of input of LSTM cells
+    hidden_size: Only for LSTM routines, size of output of LSTM cells
     """
 
     n_out = len(np.unique(yraw))

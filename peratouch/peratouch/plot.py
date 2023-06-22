@@ -39,6 +39,10 @@ def plot_grid(batch):
 def plot_flatten(batch):
     points = batch.flatten()
     if points.size==0: return 
+    if points.size > 5000:
+        points = points[:5000]
+        print("Plot size bigger than 5000 points, imposing cut-off at first 5000 points")
+
     plt.figure(figsize=(15, 3))
     plt.tight_layout()
     plt.plot(range(len(points)), points, "b.")
