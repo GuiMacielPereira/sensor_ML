@@ -55,7 +55,6 @@ def plot_X(X, y):
     _, n_ch, n_points = X.shape
     n_users = len(np.unique(y))
     plt.figure(figsize=(n_users*3, n_ch*3))
-    # plt.suptitle("Mean and std of signals for users and channels")
     plt.tight_layout()
 
     x = np.arange(n_points)
@@ -100,23 +99,16 @@ def plot_trainer(epochs, losses, accuracies, model_name, save_path):
 
             ax0.set_ylabel('Accuracy', color="blue")
             ax0.tick_params(axis='y', colors='blue')
-            # ax0.set_ylim(0.3, 0.75)
-            # ax0.set_ylim(0.4*np.max(accuracies), 1.05*np.max(accuracies))
             ax0.set_ylim(bottom=0.7*np.min(accuracies))
 
             ax1.set_ylabel('Loss', color="green")
             ax1.tick_params(axis='y', colors='green')
-            # ax1.set_ylim(0.7, 1.4)
-            # ax1.set_ylim(0.90*np.min(losses), 2*np.min(losses))
             ax1.set_ylim(top=1.4*np.max(losses))
 
             ax0.set_xlabel('Epochs')
-            # ax0.set_xticks([1]+list(ax0.get_xticks()))
             ax0.set_xlim(left=1)
 
     if save_path != None:
-        # filename = model_name + '_training.pdf'
-        # plt.savefig(str(path_figures / filename), bbox_inches='tight')
         plt.savefig(save_path, bbox_inches='tight')
 
 # Plots for analysis 

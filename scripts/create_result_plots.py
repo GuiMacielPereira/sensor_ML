@@ -42,7 +42,7 @@ plt.show()
 #     print(metrics.classification_report(data['actual_vals'], data['predictions'], digits=3))
 #     with sns.axes_style('dark'):
 #         metrics.ConfusionMatrixDisplay.from_predictions(data['actual_vals'], data['predictions'], cmap='plasma')
-#         plt.savefig(str(path_figures / f'{m}_conf_{day}.pdf'), bbox_inches='tight')
+#         plt.savefig(str(path_results / f'{m}_conf_{day}.pdf'), bbox_inches='tight')
 # plt.show()
 #
 
