@@ -1,6 +1,7 @@
 ### How to setup:
 
 `pip install -r requirements.txt`
+
 `pip install -e peratouch`
 
 ### Where to start:
