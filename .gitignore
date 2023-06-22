@@ -2,4 +2,3 @@
 __pycache__/
 data/raw_npz/five_users*.npz
 data/processed/five_users*.npz
-results/analysis/no_presses*.npz
