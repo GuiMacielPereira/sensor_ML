@@ -5,6 +5,7 @@ The raw data for 5 people was recorded using Peratech sensors, and the presses w
 ### How to setup:
 
 `pip install -r requirements.txt`
+
 `pip install -e peratouch`
 
 ### Where to start:
