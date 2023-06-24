@@ -1,3 +1,7 @@
+## Identifying user presses using Neural Networks built with PyTorch
+
+The raw data for 5 people was recorded using Peratech sensors, and the presses were collected whilst users were playing Guitar Hero 3. The notebooks show the procedure to train three models: CNN, LSTM and CNN-LSTM. The inner workings of these networks and the training procedure can be found inside the folder peratouch.
+
 ### How to setup:
 
 `pip install -r requirements.txt`

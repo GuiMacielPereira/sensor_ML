@@ -1,4 +1,5 @@
-# Script to store all of the main functions for cleaning and loading data
+# Script defines class used for training networks
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader

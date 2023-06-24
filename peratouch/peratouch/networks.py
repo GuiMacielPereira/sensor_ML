@@ -1,3 +1,4 @@
+# Definition of network architectures 
 
 import torch.nn as nn
 

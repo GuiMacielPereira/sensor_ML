@@ -1,4 +1,7 @@
 
+# Archive for unused routines and abandoned explorations
+# Not used anywhere, used only for recording 
+
 import numpy as np
 
 # Takes in path for raw npz data. 

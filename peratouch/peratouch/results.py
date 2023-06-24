@@ -1,3 +1,5 @@
+# Class to produce and store results
+
 import torch
 import sklearn
 from peratouch.data import Data

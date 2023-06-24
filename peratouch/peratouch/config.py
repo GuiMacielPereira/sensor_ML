@@ -1,3 +1,5 @@
+# Definition of variables to be used throughout several notebooks
+
 from pathlib import Path
 
 # Build path by receding from current file
