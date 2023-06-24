@@ -60,7 +60,6 @@ packaging==23.1
 pandas==2.0.2
 pandocfilters==1.5.0
 parso==0.8.3
--e git+ssh://git@github.com/guijmp/sensor_ML.git@f00a1b6a95bfa15547c07645aa2dcd44706a3005#egg=peratouch&subdirectory=peratouch
 pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==9.3.0
@@ -95,9 +94,6 @@ sympy==1.11.1
 terminado==0.17.1
 threadpoolctl==3.1.0
 tinycss2==1.2.1
-torch==2.0.1+cpu
-torchaudio==2.0.2+cpu
-torchvision==0.15.2+cpu
 tornado==6.3.2
 traitlets==5.9.0
 typing_extensions==4.4.0
