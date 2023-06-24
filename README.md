@@ -4,9 +4,11 @@ The raw data for 5 people was recorded using Peratech sensors, and the presses w
 
 ### How to setup:
 
-`pip install -r requirements.txt`
+Install suitable version of [PyTorch](https://pytorch.org/get-started/locally/) using pip.
 
-`pip install -e peratouch`
+Then in the repository directory install the remaining requirements and local project peratouch:
+
+`pip install -r requirements.txt -e peratouch`
 
 ### Where to start:
 
